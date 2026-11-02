@@ -478,7 +478,7 @@
 
   // ---------- Ảnh giữ chỗ khi chưa có ảnh thật ----------
   const TONES = [['#efe2d0', '#c98f8f', '#6e1a20'], ['#f3e8db', '#b5878a', '#511419'], ['#ece4d8', '#d4a59a', '#7a1f26'], ['#f6ede2', '#c4a07a', '#5a1a1f']];
-  function photo(i) {
+  function photo(i, names = '') {
     seed = 100 + i;
     const W = 600, H = 900, [c, g] = cv(W, H), T = TONES[i % TONES.length];
     let gr = g.createLinearGradient(0, 0, W * .4, H); gr.addColorStop(0, T[0]); gr.addColorStop(.6, T[1]); gr.addColorStop(1, T[2]);
@@ -491,22 +491,25 @@
     const h = new Path2D(); heart(h, W / 2, H * .44, 70);
     g.lineWidth = 3; g.strokeStyle = 'rgba(255,250,243,.85)'; g.stroke(h);
     g.fillStyle = 'rgba(255,250,243,.92)'; g.textAlign = 'center';
-    g.font = 'italic 44px "Times New Roman", serif'; g.fillText('Ngọc Long & Phương Anh', W / 2, H * .6);
+    g.font = 'italic 44px "Times New Roman", serif'; g.fillText(names, W / 2, H * .6);
     g.font = '24px "Times New Roman", serif'; g.fillText(i ? 'Ảnh cưới ' + i : 'Ảnh của hai bạn', W / 2, H * .65);
     return c.toDataURL('image/jpeg', .85);
   }
   window.artPhoto = photo;
 
   // ---------- Gán hình cho các thẻ <img> ----------
+  // Mỗi hình vẽ một lần rồi dùng lại; window.artFill() gán cho các <img> dựng sau (lịch trình từ content.js)
+  const made = {};
   const apply = (sel, make) => {
-    const imgs = document.querySelectorAll(sel);
+    const imgs = [...document.querySelectorAll(sel)].filter(im => !im.getAttribute('src'));
     if (!imgs.length) return;
-    const c = make();
-    c.toBlob(b => { const url = URL.createObjectURL(b); imgs.forEach(im => { im.width = c.width; im.height = c.height; im.src = url; }); });
+    made[sel] = made[sel] || new Promise(res => { const c = make(); c.toBlob(b => res([URL.createObjectURL(b), c.width, c.height])); });
+    made[sel].then(([url, w, h]) => imgs.forEach(im => { im.width = w; im.height = h; im.src = url; }));
   };
   const castle = 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(castleSVG());
   document.querySelectorAll('img.castle').forEach(im => { im.src = castle; });
-  apply('.art-bouquet', bouquet);
-  const jobs = [['.art-env-back', envBack], ['.art-env-cover', envCover], ['.art-bouquet-wide', bouquetWide], ['.art-gift', giftEnv], ['.art-camera', camera], ['.art-cake', cake], ['.art-cook', cook]];
-  (function next() { const j = jobs.shift(); if (j) { apply(...j); setTimeout(next, 0); } })();
+  const jobs = [['.art-bouquet', bouquet], ['.art-env-back', envBack], ['.art-env-cover', envCover], ['.art-bouquet-wide', bouquetWide], ['.art-gift', giftEnv], ['.art-camera', camera], ['.art-cake', cake], ['.art-cook', cook]];
+  const next = i => { if (i < jobs.length) { apply(...jobs[i]); setTimeout(next, 0, i + 1); } }; // vẽ lần lượt, không chặn trang lâu
+  window.artFill = () => next(0);
+  next(0);
 })();

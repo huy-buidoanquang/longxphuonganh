@@ -1,7 +1,7 @@
 // Lưu "Xác nhận tham dự" và "Sổ lưu bút" vào Google Sheet, trả danh sách lời chúc cho thiệp.
 // 1. Tạo Google Sheet → Tiện ích mở rộng → Apps Script → dán file này vào.
 // 2. Triển khai → Tùy chọn triển khai mới → Ứng dụng web, "Bất kỳ ai" được truy cập.
-// 3. Chép URL ứng dụng web vào data-endpoint của <form id="rsvp-form"> trong index.html.
+// 3. Dán URL ứng dụng web vào ô "Link Google Apps Script" ở trang quản trị (mục "Xác nhận tham dự & lời chúc") rồi bấm Lưu.
 // Thêm dấu ' trước giá trị bắt đầu bằng = + - @ để Sheet không chạy nó như công thức
 const safe = v => (/^[=+\-@]/.test(v || '') ? "'" : '') + String(v || '').slice(0, 1000);
 
