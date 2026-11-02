@@ -77,7 +77,7 @@ window.CONTENT = {
     ]
   },
   "photos": {
-    "hero": "",
+    "hero": "images/hero-mvz7xwe10dahs.jpg",
     "album": [
       "",
       "",
