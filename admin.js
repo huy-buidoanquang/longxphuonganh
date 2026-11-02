@@ -8,8 +8,11 @@
    - Danh sách khách mời chỉ lưu trong trình duyệt (localStorage) vì kho GitHub để công khai. */
 (() => {
   const REPO = 'huy-buidoanquang/longxphuonganh', BRANCH = 'main', API = 'https://api.github.com/repos/' + REPO;
-  // admin.<tên miền> -> thiệp ở <tên miền>; mở ở /admin/ của chính trang thiệp (hoặc máy cục bộ) thì thiệp ở thư mục cha
-  const SITE = location.hostname.startsWith('admin.') ? `https://${location.hostname.slice(6)}/` : new URL('../', location.href).href;
+  // Thiệp chính: admin.x.pages.dev hay <mã bản dựng>.x.pages.dev -> x.pages.dev; admin.<tên miền riêng> -> <tên miền riêng>;
+  // mở ở /admin/ của chính trang thiệp (hoặc máy cục bộ) thì thiệp ở thư mục cha. Link mời khách dựa vào đây nên không được trỏ nhầm.
+  const host = location.hostname;
+  const SITE = host.endsWith('.pages.dev') ? `https://${host.split('.').slice(-3).join('.')}/`
+    : host.startsWith('admin.') ? `https://${host.slice(6)}/` : new URL('../', location.href).href;
   const ORIGIN = new URL(SITE).origin;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
