@@ -1,209 +1,352 @@
 'use strict';
-const $ = (s, el = document) => el.querySelector(s);
-const $$ = (s, el = document) => [...el.querySelectorAll(s)];
-const guest = new URLSearchParams(location.search).get('to'); // ?to=Anh%20Huy -> "Kính gửi Anh Huy"
-const reduceMotion = matchMedia('(prefers-reduced-motion: reduce)').matches;
-let scene3d = null;
-const celebrate = (x, y) => scene3d && scene3d.celebrate(x, y);
+(() => {
+  const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
+  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const HEART = '<svg viewBox="0 0 24 24"><use href="#i-heart"/></svg>';
+  const COLORS = ['#a8323b', '#ece4d8', '#c9a24a', '#7a1f26'];
+  const params = new URLSearchParams(location.search);
 
-history.scrollRestoration = 'manual'; // luôn bắt đầu từ màn mở thiệp
-scrollTo(0, 0);
-
-/* ================= Hoa trang trí (Canvas 2D) ================= */
-const staticFlorals = $$('canvas.florals:not([data-frame])');
-const heroFrame = floralFrame($('.hero .florals'));
-const vineArt = vine($('#vine'));
-staticFlorals.forEach(drawFlorals);
-document.fonts && document.fonts.ready.then(() => staticFlorals.forEach(drawFlorals)); // chiều cao section đổi khi font tải xong
-let lastWidth = innerWidth;
-addEventListener('resize', () => {
-  if (innerWidth === lastWidth) return; // thanh địa chỉ mobile ẩn/hiện chỉ đổi chiều cao
-  lastWidth = innerWidth;
-  staticFlorals.forEach(drawFlorals); heroFrame.build(); vineArt.build();
-  if (reduceMotion) requestAnimationFrame(frame); // không có vòng lặp chuyển động thì vẽ lại một lần
-});
-
-/* ================= Chuyển động theo khung hình: hoa đung đưa, parallax hero, đường lịch trình ================= */
-const hero = $('.hero'), heroCanvas = $('.hero .florals'), heroContent = $('.hero-content'), timeline = $('.timeline');
-let heroVisible = true, heroMostlyVisible = true, rsvpVisible = false;
-new IntersectionObserver(([e]) => {
-  heroVisible = e.isIntersecting; heroMostlyVisible = e.intersectionRatio > 0.4; syncFab();
-}, { threshold: [0, 0.4] }).observe(hero);
-function frame(ms) {
-  const t = ms / 1000, y = scrollY;
-  if (heroVisible) {
-    heroFrame.draw(t);
-    heroCanvas.style.transform = `translateY(${y * 0.3}px) scale(${1 + y / 4000})`;
-    heroContent.style.transform = `translateY(${y * 0.15}px)`;
-    heroContent.style.opacity = Math.max(0, 1 - y / (innerHeight * 0.85));
+  // ?nha=gai: thiệp bên nhà gái theo bản in nhà gái (tên cô dâu đứng trước, lễ vu quy, tiệc 16/11 ở NVH Tân Trại).
+  // Không có tham số thì giữ nguyên thiệp nhà trai viết sẵn trong index.html.
+  if (params.get('nha') === 'gai') {
+    const swap = sel => { const [a, b] = $$(sel), t = document.createComment(''); a.replaceWith(t); b.replaceWith(a); t.replaceWith(b); };
+    ['.intro-names > span:not(.amp)', '.hero-names p', '.parent', '.couple h3', '.couple .role', '.tline li'].forEach(swap);
+    const set = (sel, text) => { $(sel).textContent = text; };
+    set('.intro-date span', '16 tháng 11, 2026');
+    set('.announce span', 'TRÂN TRỌNG BÁO TIN\nLỄ VU QUY CỦA CON CHÚNG TÔI');
+    set('.when .big16', 'HÔN LỄ ĐƯỢC CỬ HÀNH TẠI\nTƯ GIA NHÀ GÁI');
+    set('.when .time-row > span', 'VÀO LÚC 09:00');
+    set('.party .time-row > span:last-child > span', 'THỨ HAI');
+    set('.party .dd', '16');
+    set('.party .lunar', '(Tức ngày 08 tháng 10 năm Bính Ngọ)');
+    set('#venue-addr', 'Nhà Văn Hóa Tân Trại\nThôn Tân Trại, Xã Nội Bài, Hà Nội');
+    set('.tline li:first-child .tl-name span', 'Tiệc cưới (16/11)');
+    $('.tline li:last-child .rel').firstChild.nodeValue = '09:00';
+    set('.tline li:last-child .tl-name span', 'Lễ vu quy (17/11)');
+    set('.sign span', '♡ Phương Anh & Ngọc Long');
+    $('.cal').dataset.date = '2026-11-16T16:30:00+07:00';
+    $('.map').src = 'https://maps.google.com/maps?q=21.2087625,105.7975156&z=16&output=embed'; // plus code 6Q5X+G22 trong QR nhà gái
+    $('.directions').href = 'https://maps.app.goo.gl/pbwnjAmeM1ftQhQS8';
+    document.title = 'Phương Anh & Ngọc Long — Thiệp cưới';
   }
-  vineArt.draw(t);
-  const r = timeline.getBoundingClientRect();
-  timeline.style.setProperty('--progress', Math.min(1, Math.max(0, (innerHeight * 0.75 - r.top) / r.height)));
-  if (!reduceMotion) requestAnimationFrame(frame);
-}
-requestAnimationFrame(frame);
 
-/* ================= Nội dung trang ================= */
-if (guest) {
-  $('#guest-name').textContent = guest;
-  $('.guest').hidden = false;
-  $('#rsvp-form').elements.name.value = guest;
-}
-
-// Hiện dần từng phần khi cuộn tới, các phần tử con lần lượt trễ nhau
-const io = new IntersectionObserver(entries => entries.forEach(e => {
-  if (e.isIntersecting) { e.target.classList.add('in'); io.unobserve(e.target); }
-}), { threshold: 0.12, rootMargin: '0px 0px -8% 0px' });
-$$('.reveal').forEach(sec => { [...sec.children].forEach((el, i) => el.style.setProperty('--d', i)); io.observe(sec); });
-
-// Lời ngỏ: tách từng chữ để chữ hiện dần từ mờ sang rõ
-$$('.blur-text').forEach(p => {
-  const words = p.textContent.trim().split(/\s+/);
-  p.textContent = '';
-  words.forEach((w, i) => { const s = document.createElement('span'); s.textContent = w; s.style.setProperty('--w', i); p.append(s, ' '); });
-});
-
-// Đếm ngược, số lật kiểu 3D mỗi khi đổi
-const countdown = $('.countdown'), weddingAt = new Date(countdown.dataset.date);
-function tick() {
-  const s = Math.max(0, Math.floor((weddingAt - Date.now()) / 1000));
-  const v = { d: Math.floor(s / 86400), h: Math.floor(s / 3600) % 24, m: Math.floor(s / 60) % 60, s: s % 60 };
-  for (const el of $$('[data-unit]', countdown)) {
-    const txt = String(v[el.dataset.unit]).padStart(2, '0');
-    if (el.textContent !== txt) { el.textContent = txt; el.classList.remove('flip'); void el.offsetWidth; el.classList.add('flip'); }
-  }
-}
-tick(); setInterval(tick, 1000);
-
-// Lưu vào lịch: Google Calendar + file .ics (iPhone, Outlook)
-const evTitle = 'Đám cưới Long & Phương Anh', evEnd = new Date(weddingAt.getTime() + 4 * 3600e3);
-const evPlace = `${$('.venue-name').textContent}, ${$('.address').textContent}`;
-const stamp = d => d.toISOString().replace(/[-:]/g, '').replace(/\.\d{3}/, '');
-const icsText = s => s.replace(/[\\;,]/g, m => '\\' + m);
-$('#gcal').href = 'https://calendar.google.com/calendar/render?action=TEMPLATE&text=' + encodeURIComponent(evTitle)
-  + `&dates=${stamp(weddingAt)}/${stamp(evEnd)}&location=` + encodeURIComponent(evPlace);
-$('#ics').href = URL.createObjectURL(new Blob([[
-  'BEGIN:VCALENDAR', 'VERSION:2.0', 'PRODID:-//thiep-cuoi//VI', 'BEGIN:VEVENT',
-  `UID:${stamp(weddingAt)}-long-phuonganh`, `DTSTAMP:${stamp(new Date())}`, `DTSTART:${stamp(weddingAt)}`, `DTEND:${stamp(evEnd)}`,
-  `SUMMARY:${icsText(evTitle)}`, `LOCATION:${icsText(evPlace)}`, 'END:VEVENT', 'END:VCALENDAR',
-].join('\r\n')], { type: 'text/calendar' }));
-
-// Album: vòng ảnh 3D bằng CSS (rotateY + translateZ), tự xoay, kéo/vuốt để quay
-(function galleryRing() {
-  const stage = $('#ring-stage'), ring = $('#ring'), figs = $$('figure', ring), N = figs.length, step = 360 / N;
-  const AUTO = reduceMotion ? 0 : 14;
-  let angle = 0, vel = AUTO, drag = null, visible = false, radius = 0, last = 0;
-  figs.forEach((f, i) => {
-    const img = $('img', f), fix = () => document.fonts.ready.then(() => { img.src = placeholderPhoto(i); });
-    if (img.complete && !img.naturalWidth) fix(); else img.addEventListener('error', fix, { once: true });
+  // Ảnh giữ chỗ khi chưa có file ảnh trong images/
+  $$('img[data-ph]').forEach(img => {
+    const fallback = () => { img.src = window.artPhoto(+img.dataset.ph); };
+    if (img.complete && !img.naturalWidth) fallback(); else img.addEventListener('error', fallback, { once: true });
   });
-  function layout() {
-    radius = Math.round(figs[0].offsetWidth / 2 / Math.tan(Math.PI / N)) + 24;
-    figs.forEach((f, i) => { f.style.transform = `rotateY(${i * step}deg) translateZ(${radius}px)`; });
+
+  // ?to=Anh%20Huy -> "Thân Mời / Anh Huy"
+  const guest = (params.get('to') || '').trim().slice(0, 60);
+  if (guest) { const el = $('#guest-name'); el.textContent = guest; el.hidden = false; }
+
+  // ---------- Màn mở thiệp ----------
+  const intro = $('#intro'), musicBox = $('.music'), musicBtn = $('#music-btn');
+  const hearts = $('.intro-hearts');
+  if (!reduce) for (let i = 0; i < 12; i++) {
+    const d = document.createElement('div'), dur = rnd(18, 26);
+    d.innerHTML = HEART;
+    d.style.cssText = `left:${rnd(0, 100)}%;font-size:${rnd(12, 23)}px;color:${COLORS[i % 4]};--sway:${rnd(-30, 30)}px;--dur:${dur}s;--delay:${-rnd(0, dur)}s`;
+    hearts.appendChild(d);
   }
-  function update(ms) {
-    const dt = Math.min(0.05, (ms - last) / 1000 || 0); last = ms;
-    if (!drag) { angle += vel * dt; vel += (AUTO - vel) * Math.min(1, dt * 1.2); }
-    ring.style.transform = `translateZ(${-radius}px) rotateY(${angle}deg)`;
-    figs.forEach((f, i) => { f.style.opacity = 0.3 + 0.7 * Math.max(0, Math.cos((i * step + angle) * Math.PI / 180)); });
-    if (visible) requestAnimationFrame(update);
-  }
-  new IntersectionObserver(([e]) => {
-    visible = e.isIntersecting;
-    if (visible) { last = performance.now(); requestAnimationFrame(update); }
-  }).observe(stage);
-  stage.addEventListener('pointerdown', e => { drag = { x: e.clientX, a: angle, t: e.timeStamp }; stage.setPointerCapture(e.pointerId); });
-  stage.addEventListener('pointermove', e => {
-    if (!drag) return;
-    const next = drag.a + (e.clientX - drag.x) * 0.35;
-    vel = (next - angle) / Math.max(1, e.timeStamp - drag.t) * 1000; drag.t = e.timeStamp;
-    angle = next;
+
+  // Thẻ mời giữ nguyên bố cục, chỉ thu nhỏ cho vừa máy hẹp (Galaxy Fold) hoặc điện thoại xoay ngang
+  const wrap = $('.intro-wrap');
+  const fitIntro = () => { wrap.style.scale = Math.min(1, (innerWidth - 24) / wrap.offsetWidth, (innerHeight - 24) / wrap.offsetHeight).toFixed(3); };
+  fitIntro();
+  document.fonts?.ready.then(fitIntro);
+  addEventListener('resize', fitIntro);
+
+  let music = null;
+  const setPlaying = on => { musicBox.classList.toggle('playing', on); musicBtn.setAttribute('aria-pressed', on); };
+  musicBtn.addEventListener('click', () => { music = music || createMusic(); if (music) setPlaying(music.toggle()); });
+
+  $('#open-btn').addEventListener('click', () => {
+    if (intro.classList.contains('opening')) return;
+    music = createMusic();
+    if (music) setPlaying(music.start());
+    intro.classList.add('opening');
+    const ring = document.createElement('div');
+    ring.className = 'seal-ring';
+    $('.intro-wrap').appendChild(ring);
+    // nhịp như mẫu: 0s dấu vỡ + hoa bay; 0,5s thiệp bay lên + tim bung; 1,3s lớp phủ mờ dần; 1,5s vào thiệp
+    if (!reduce) setTimeout(() => {
+      for (let i = 0; i < 32; i++) {
+        const b = document.createElement('div'), a = rnd(0, Math.PI * 2), dist = rnd(90, 420);
+        b.className = 'burst'; b.innerHTML = HEART;
+        b.style.cssText = `font-size:${rnd(4, 32)}px;color:${COLORS[i % 4]};--dx:${Math.cos(a) * dist}px;--dy:${Math.sin(a) * dist}px;--rot-start:${rnd(-30, 30)}deg;--rot-end:${rnd(-220, 220)}deg;--delay:${rnd(0, 150)}ms`;
+        intro.appendChild(b);
+      }
+    }, 500);
+    setTimeout(() => intro.classList.add('fade'), 1300);
+    setTimeout(() => { intro.remove(); removeEventListener('resize', fitIntro); document.body.classList.remove('locked'); musicBox.hidden = false; }, 1500);
+    if (!reduce) autoScroll();
   });
-  for (const ev of ['pointerup', 'pointercancel']) stage.addEventListener(ev, () => { drag = null; });
-  layout();
-  addEventListener('resize', layout);
+
+  // Tự cuộn chậm ~50px/giây từ giây thứ 3,4; dừng hẳn khi người xem tự lăn, chạm, bấm phím hoặc nhấn chuột
+  function autoScroll() {
+    let stopped = false;
+    const stop = () => { stopped = true; };
+    ['wheel', 'touchstart', 'keydown', 'mousedown'].forEach(ev => addEventListener(ev, stop, { once: true, passive: true }));
+    setTimeout(() => {
+      let y = scrollY, last = performance.now();
+      requestAnimationFrame(function step(t) {
+        if (stopped) return;
+        y += (t - last) * .05; last = t;
+        if (y >= document.documentElement.scrollHeight - innerHeight) return;
+        scrollTo(0, y);
+        requestAnimationFrame(step);
+      });
+    }, 3400);
+  }
+
+  // ---------- Hoa trang trí trôi xuống theo 300px cuộn đầu tiên (0 → 40px) ----------
+  const pars = $$('.bq-par');
+  if (!reduce) {
+    let ticking = false;
+    const upd = () => {
+      ticking = false;
+      const t = `translateY(${(Math.min(scrollY / 300, 1) * 40).toFixed(1)}px)`;
+      pars.forEach(el => { el.style.transform = t; });
+    };
+    addEventListener('scroll', () => { if (!ticking) { ticking = true; requestAnimationFrame(upd); } }, { passive: true });
+  }
+
+  // ---------- Tên cô dâu chú rể: chung một cỡ, tối đa 46px, co lại để tên dài nhất vừa khung ----------
+  const names = $$('.couple h3');
+  const fitNames = () => {
+    names.forEach(h => { h.style.fontSize = '46px'; });
+    const r = document.createRange();
+    const k = Math.min(1, ...names.map(h => { r.selectNodeContents(h); return .95 * h.clientWidth / r.getBoundingClientRect().width; }));
+    names.forEach(h => { h.style.fontSize = Math.floor(46 * k) + 'px'; });
+  };
+  fitNames();
+  document.fonts?.ready.then(fitNames);
+  addEventListener('resize', fitNames);
+
+  // ---------- Lịch tháng + "Thêm vào lịch" ----------
+  const cal = $('.cal'), iso = cal.dataset.date;
+  const [Y, M, D] = iso.slice(0, 10).split('-').map(Number), [hh, mm] = iso.slice(11, 16).split(':').map(Number);
+  $('.cal-title').textContent = `Tháng ${M} / ${Y}`;
+  let cells = '<div></div>'.repeat((new Date(Y, M - 1, 1).getDay() + 6) % 7);
+  for (let d = 1, n = new Date(Y, M, 0).getDate(); d <= n; d++) {
+    cells += d === D
+      ? `<div><div class="cal-heart" aria-label="Ngày cưới ${d}"><svg viewBox="0 0 24 22"><use href="#i-cal-heart"/></svg><span>${d}</span></div></div>`
+      : `<div><span>${d}</span></div>`;
+  }
+  $('.cal-days').innerHTML = cells;
+  const p2 = v => String(v).padStart(2, '0'), day = `${Y}${p2(M)}${p2(D)}`;
+  $('#add-cal').href = 'https://calendar.google.com/calendar/render?' + new URLSearchParams({
+    action: 'TEMPLATE', text: 'Tiệc cưới ' + $$('.hero-names p').map(p => p.textContent).join(' & '),
+    dates: `${day}T${p2(hh)}${p2(mm)}00/${day}T${p2(Math.min(hh + 2, 23))}${p2(mm)}00`,
+    details: 'Rất hân hạnh được đón tiếp!', location: $('#venue-addr').textContent.replace(/\s*\n\s*/g, ', '), ctz: 'Asia/Ho_Chi_Minh',
+  });
+
+  // ---------- Album xoay 3D ----------
+  const items = $$('.cf-item'), N = items.length, dots = $('#cf-dots');
+  let cur = 0;
+  items.forEach((el, i) => {
+    const b = document.createElement('button');
+    b.type = 'button'; b.setAttribute('aria-label', `Ảnh ${i + 1}`);
+    b.addEventListener('click', () => nav(i));
+    dots.appendChild(b);
+    el.tabIndex = 0; el.setAttribute('role', 'button'); el.setAttribute('aria-label', `Xem ảnh ${i + 1}`);
+    el.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); el.click(); } });
+  });
+  function go(i) {
+    cur = (i + N) % N;
+    items.forEach((el, j) => {
+      let k = (j - cur + N) % N;
+      if (k > N / 2) k -= N;
+      const a = Math.abs(k);
+      el.style.transform = `translateX(${k * 60}%) translateZ(${-150 * a}px) rotateY(${k * 45}deg) scale(${[1, .85][a] || .7})`;
+      el.style.opacity = [1, .75, .5][a] || .3;
+      el.style.zIndex = 100 - a;
+      el.classList.toggle('active', !k);
+    });
+    [...dots.children].forEach((d, j) => d.classList.toggle('on', j === cur));
+  }
+  go(0);
+  // Tự chuyển ảnh mỗi 1,4 giây kể từ khi người xem cuộn tới album (như mẫu); không chạy khi đang xem ảnh lớn
+  let timer = 0;
+  const play = () => { clearInterval(timer); timer = setInterval(() => { if (lb.hidden) go(cur + 1); }, 1400); };
+  const nav = i => { go(i); if (timer) play(); };
+  const cf = $('#cf');
+  if (!reduce) {
+    let seen = false;
+    new IntersectionObserver(([e]) => { seen = e.isIntersecting; }).observe(cf);
+    addEventListener('scroll', function onScroll() { if (seen) { play(); removeEventListener('scroll', onScroll); } }, { passive: true });
+  }
+  const swipe = (el, fn) => {
+    let sx = null;
+    el.addEventListener('pointerdown', e => { sx = e.clientX; el.swiped = false; });
+    el.addEventListener('pointercancel', () => { sx = null; });
+    el.addEventListener('pointerup', e => {
+      if (sx === null) return;
+      const dx = e.clientX - sx; sx = null;
+      if (Math.abs(dx) > 40) { el.swiped = true; fn(dx < 0 ? 1 : -1); }
+    });
+  };
+  swipe(cf, s => nav(cur + s));
+  $('.cf-arrow.prev').addEventListener('click', () => nav(cur - 1));
+  $('.cf-arrow.next').addEventListener('click', () => nav(cur + 1));
+  items.forEach((el, j) => el.addEventListener('click', () => { if (!cf.swiped) j === cur ? openLb(j) : nav(j); }));
+
+  // ---------- Hộp thoại dùng chung ----------
+  let lastFocus = null;
+  function openModal(m) {
+    lastFocus = document.activeElement;
+    m.hidden = false;
+    document.documentElement.style.overflow = 'hidden';
+    $('button[data-close], .lb-close', m)?.focus({ preventScroll: true });
+  }
+  function closeModal(m) {
+    m.hidden = true;
+    if (!$('[role=dialog]:not([hidden])')) document.documentElement.style.overflow = '';
+    lastFocus?.focus({ preventScroll: true });
+  }
+  $$('[data-close]').forEach(el => el.addEventListener('click', () => closeModal(el.closest('[role=dialog]'))));
+  addEventListener('keydown', e => {
+    const m = $$('[role=dialog]:not([hidden])').pop();
+    if (!m) return;
+    if (e.key === 'Escape') closeModal(m);
+    if (m === lb && e.key === 'ArrowLeft') showLb(li - 1);
+    if (m === lb && e.key === 'ArrowRight') showLb(li + 1);
+    if (e.key === 'Tab') { // giữ phím Tab trong hộp thoại đang mở
+      const f = $$('button, input, textarea, a[href], [tabindex="0"]', m).filter(x => x.offsetParent && !x.disabled);
+      if (!f.length) return;
+      const first = f[0], end = f[f.length - 1];
+      if (e.shiftKey && document.activeElement === first) { e.preventDefault(); end.focus(); }
+      else if (!e.shiftKey && document.activeElement === end) { e.preventDefault(); first.focus(); }
+    }
+  });
+
+  // ---------- Xem ảnh lớn ----------
+  const lb = $('#lightbox'), lbImg = $('.lb-img'), lbCount = $('.lb-count'), thumbs = $('.lb-thumbs'), lbMain = $('.lb-main');
+  let li = 0;
+  const srcs = () => items.map(el => $('img', el).src);
+  function showLb(i) {
+    li = (i + N) % N;
+    lbImg.src = srcs()[li];
+    lbCount.textContent = `${li + 1} / ${N}`;
+    [...thumbs.children].forEach((t, j) => t.classList.toggle('on', j === li));
+    const t = thumbs.children[li];
+    if (t) thumbs.scrollLeft = t.offsetLeft - (thumbs.clientWidth - t.offsetWidth) / 2;
+  }
+  function openLb(i) {
+    thumbs.innerHTML = srcs().map((s, j) => `<button type="button" aria-label="Ảnh ${j + 1}"><img src="${s}" alt=""></button>`).join('');
+    [...thumbs.children].forEach((t, j) => t.addEventListener('click', () => showLb(j)));
+    openModal(lb);
+    showLb(i);
+  }
+  $('.lb-prev').addEventListener('click', () => showLb(li - 1));
+  $('.lb-next').addEventListener('click', () => showLb(li + 1));
+  $('.lb-close').addEventListener('click', () => closeModal(lb));
+  $('.lb-box').addEventListener('click', e => { if ((e.target === e.currentTarget || e.target === lbMain) && !lbMain.swiped) closeModal(lb); });
+  swipe(lbMain, s => showLb(li + s));
+
+  // ---------- Hộp quà: mã QR chuyển khoản (VietQR) ----------
+  $$('.qr-item').forEach(it => {
+    const { bank, account, name, bankName } = it.dataset;
+    if (!bank || !account) return it.remove(); // chưa có số tài khoản thật thì không hiện mã QR
+    const qr = `https://img.vietqr.io/image/${encodeURIComponent(bank)}-${encodeURIComponent(account)}-qr_only.png?accountName=${encodeURIComponent(name)}`;
+    it.insertAdjacentHTML('beforeend', `<div class="qr-box"><img loading="lazy" alt="Mã QR chuyển khoản ${bankName}" src="${qr}"></div>
+      <div class="qr-info"><p>${bankName}</p><p class="acc">${account}</p><p class="hold">${name}</p>
+      <a class="qr-save" href="${qr}" download="QR-${account}.png" target="_blank" rel="noopener noreferrer"><svg><use href="#i-down"/></svg>Lưu QR</a></div>`);
+  });
+  if (!$('.qr-item')) $('#gift-btn').closest('.sec-castle').hidden = true;
+  $('#gift-btn').addEventListener('click', () => openModal($('#gift-sheet')));
+
+  // ---------- Xác nhận tham dự ----------
+  const rsvp = $('#rsvp-modal'), form = $('#rsvp-form'), submit = $('.submit', form);
+  const guests = $('.guests', form), msg = $('.msg', form), count = $('#rsvp-guests');
+  let nGuests = 1;
+  $('#rsvp-open').addEventListener('click', () => openModal(rsvp));
+  if (guest) $('#rsvp-name').value = guest;
+  const valid = () => { submit.disabled = !form.attend.value; }; // như mẫu: chọn có/không là bấm gửi được, tên kiểm tra khi gửi
+  form.addEventListener('input', valid);
+  form.addEventListener('change', () => {
+    $$('.opt', form).forEach(o => o.classList.toggle('sel', $('input', o).checked));
+    guests.hidden = form.attend.value !== 'yes';
+    msg.hidden = !form.attend.value;
+    valid();
+  });
+  const stepBtns = $$('[data-step]', form);
+  const setGuests = v => { nGuests = Math.min(Math.max(v, 1), 20); count.textContent = nGuests; stepBtns[1].disabled = nGuests >= 20; };
+  stepBtns.forEach(b => b.addEventListener('click', () => setGuests(nGuests + +b.dataset.step)));
+  setGuests(1);
+  form.addEventListener('submit', async e => {
+    e.preventDefault();
+    if (submit.disabled) return;
+    const data = { name: $('#rsvp-name').value.trim(), attend: form.attend.value === 'yes' ? 'Có' : 'Không', guests: form.attend.value === 'yes' ? nGuests : 0, message: form.message.value.trim() };
+    submit.disabled = true;
+    if (form.dataset.endpoint) { // Google Sheet qua Apps Script (xem rsvp-google-sheet.gs)
+      try { await fetch(form.dataset.endpoint, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ type: 'rsvp', ...data }) }); }
+      catch { submit.disabled = false; alert('Chưa gửi được, bạn thử lại giúp mình nhé.'); return; }
+    } else {
+      const body = `Họ tên: ${data.name}\nTham dự: ${data.attend}\nSố người: ${data.guests}\nLời nhắn: ${data.message}`;
+      location.href = `mailto:${form.dataset.email}?subject=${encodeURIComponent('Xác nhận tham dự - ' + data.name)}&body=${encodeURIComponent(body)}`;
+    }
+    $('#done-name').textContent = data.name;
+    $('#done-msg').textContent = data.attend === 'Có' ? 'Hẹn gặp bạn trong ngày vui của chúng mình!' : 'Cảm ơn bạn đã báo tin, chúng mình vẫn luôn nhớ đến bạn.';
+    $('#rsvp-body').hidden = true;
+    $('#rsvp-done').hidden = false;
+  });
+
+  // ---------- Sổ lưu bút ----------
+  const wishForm = $('#wish-form'), list = $('#wishes'), endpoint = form.dataset.endpoint;
+  const KEY = 'wishes-long-phuonganh';
+  const esc = s => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+  const fmt = t => { const d = new Date(t); return `${p2(d.getHours())}:${p2(d.getMinutes())}:${p2(d.getSeconds())} ${d.getDate()}/${d.getMonth() + 1}/${d.getFullYear()}`; };
+  const render = arr => {
+    list.hidden = !arr.length;
+    list.innerHTML = arr.map(w => `<div class="wish"><div class="wish-top"><span class="wish-name">${esc(w.name)}</span><span class="wish-time">${fmt(w.time)}</span></div><p>${esc(w.message)}</p></div>`).join('');
+  };
+  const local = () => { try { return JSON.parse(localStorage.getItem(KEY)) || []; } catch { return []; } };
+  let wishes = local();
+  render(wishes);
+  if (endpoint) fetch(endpoint).then(r => r.json()).then(arr => {
+    const seen = new Set(arr.map(w => w.name + w.message));
+    wishes = [...wishes.filter(w => !seen.has(w.name + w.message)), ...arr].sort((a, b) => b.time - a.time);
+    render(wishes);
+  }).catch(() => {});
+  wishForm.addEventListener('submit', async e => {
+    e.preventDefault();
+    const w = { name: wishForm.name.value.trim(), message: wishForm.message.value.trim(), time: Date.now() };
+    if (!w.name || !w.message) return;
+    const send = $('.send', wishForm);
+    send.disabled = true;
+    if (endpoint) {
+      try { await fetch(endpoint, { method: 'POST', mode: 'no-cors', body: new URLSearchParams({ type: 'wish', name: w.name, message: w.message }) }); }
+      catch { send.disabled = false; alert('Chưa gửi được, bạn thử lại giúp mình nhé.'); return; }
+    }
+    try { localStorage.setItem(KEY, JSON.stringify([w, ...local()].slice(0, 50))); } catch {}
+    wishes = [w, ...wishes];
+    render(wishes);
+    wishForm.reset();
+    send.disabled = false;
+  });
+
+  // ---------- Gợi ý lời chúc ----------
+  const IDEAS = [
+    'Chúc hai bạn trăm năm hạnh phúc, mãi yêu thương và luôn nắm chặt tay nhau trên mọi chặng đường!',
+    'Chúc mừng hạnh phúc! Mong tổ ấm nhỏ của hai bạn luôn ngập tràn tiếng cười.',
+    'Chúc cô dâu chú rể bách niên giai lão, sớm có tin vui nhé!',
+    'Cuối cùng cũng tới ngày trọng đại rồi, chúc hai bạn mãi hạnh phúc như hôm nay!',
+    'Chúc hai bạn luôn là bạn đời, người thương và tri kỷ của nhau.',
+    'Chúc mừng đám cưới! Mong mỗi ngày bên nhau đều là một ngày đẹp.',
+    'Chúc hai bạn cùng nhau đi qua thật nhiều mùa yêu thương, vững vàng và bình yên.',
+    'Thật vui khi thấy hai bạn về chung một nhà. Chúc mãi mặn nồng!',
+    'Chúc gia đình nhỏ luôn đầy ắp niềm vui, sức khoẻ và may mắn.',
+    'Trăm năm tình viên mãn, bạc đầu nghĩa phu thê. Chúc mừng hai bạn!',
+  ];
+  const wand = $('#wand-modal'), wandList = $('#wand-list');
+  const shuffle = () => {
+    const pick = [...IDEAS].sort(() => Math.random() - .5).slice(0, 3);
+    wandList.innerHTML = pick.map(t => `<button type="button"><p>${esc(t)}</p></button>`).join('');
+    $$('button', wandList).forEach((b, i) => b.addEventListener('click', () => { wishForm.message.value = pick[i]; closeModal(wand); wishForm.message.focus(); }));
+  };
+  $('#wand-btn').addEventListener('click', () => { shuffle(); openModal(wand); });
+  $('#wand-more').addEventListener('click', shuffle);
 })();
-
-// Hộp mừng cưới: mở ra thì nạp mã VietQR + bắn pháo giấy
-const giftBtn = $('#gift-btn'), giftCards = $('#gift-cards');
-giftBtn.addEventListener('click', () => {
-  const opening = giftCards.hidden;
-  giftCards.hidden = !opening;
-  giftBtn.setAttribute('aria-expanded', opening);
-  if (!opening) return;
-  for (const card of $$('.bank-card')) {
-    const { bank, account, name } = card.dataset, qr = $('.qr', card);
-    // shortcut: ảnh QR lấy từ dịch vụ công khai img.vietqr.io (chuẩn VietQR/Napas); muốn không phụ thuộc bên ngoài thì thay bằng ảnh QR tải từ app ngân hàng
-    if (!qr.src) qr.src = `https://img.vietqr.io/image/${bank}-${account}-qr_only.png?accountName=${encodeURIComponent(name)}&addInfo=${encodeURIComponent('Mung cuoi Long Phuong Anh')}`;
-  }
-  const r = giftBtn.getBoundingClientRect();
-  celebrate(r.left + r.width / 2, r.top);
-});
-$$('.bank-card .copy').forEach(btn => btn.addEventListener('click', async () => {
-  const account = btn.closest('.bank-card').dataset.account;
-  try { await navigator.clipboard.writeText(account); btn.lastChild.textContent = ' Đã chép'; }
-  catch { btn.lastChild.textContent = ' ' + account; } // trình duyệt chặn clipboard: hiện số để khách tự chép
-  setTimeout(() => { btn.lastChild.textContent = ' Sao chép'; }, 2500);
-}));
-
-/* ================= Xác nhận tham dự ================= */
-const form = $('#rsvp-form'), guestsField = $('#guests-field'), guestsInput = form.elements.guests;
-const LABELS = { name: 'Họ tên', phone: 'Điện thoại', side: 'Khách của', attend: 'Tham dự', guests: 'Số người', diet: 'Lưu ý món ăn', song: 'Bài hát muốn nghe', message: 'Lời chúc' };
-form.addEventListener('change', () => { guestsField.hidden = form.elements.attend.value === 'Không'; });
-$$('[data-step]', form).forEach(b => b.addEventListener('click', () => {
-  guestsInput.value = Math.min(10, Math.max(1, (parseInt(guestsInput.value, 10) || 1) + +b.dataset.step));
-}));
-form.addEventListener('submit', async e => {
-  e.preventDefault();
-  const d = new FormData(form), btn = $('button[type=submit]', form);
-  const data = { ...Object.fromEntries(d), diet: d.getAll('diet').join(', '), guests: d.get('attend') === 'Có' ? d.get('guests') : '0' };
-  btn.disabled = true;
-  let saved = false;
-  if (form.dataset.endpoint) { // Google Sheet qua Apps Script (xem rsvp-google-sheet.gs)
-    try { await fetch(form.dataset.endpoint, { method: 'POST', mode: 'no-cors', body: new URLSearchParams(data) }); saved = true; }
-    catch (err) { console.warn(err); }
-  }
-  if (!saved) { // chưa cấu hình (hoặc lỗi mạng): mở email soạn sẵn gửi cô dâu chú rể
-    const body = Object.entries(LABELS).map(([k, label]) => `${label}: ${data[k] || '-'}`).join('\n');
-    location.href = `mailto:${form.dataset.email}?subject=${encodeURIComponent('Xác nhận dự tiệc cưới - ' + data.name)}&body=${encodeURIComponent(body)}`;
-  }
-  form.hidden = true;
-  const thanks = $('#thanks');
-  $('#thanks-name').textContent = data.name;
-  $('#thanks-msg').textContent = saved ? 'Chúng mình đã nhận được phản hồi của bạn ♥' : 'Bạn bấm “Gửi” trong email vừa mở để hoàn tất nhé ♥';
-  thanks.hidden = false;
-  const r = thanks.getBoundingClientRect();
-  celebrate(r.left + r.width / 2, r.top + 40);
-});
-
-/* ================= Nút nổi: nhạc + xác nhận tham dự ================= */
-const music = createMusic(), musicBtn = $('#music-btn'), fab = $('#rsvp-fab');
-const setPlaying = on => { musicBtn.classList.toggle('playing', on); musicBtn.setAttribute('aria-pressed', on); };
-musicBtn.addEventListener('click', () => setPlaying(music ? music.toggle() : false));
-function syncFab() { fab.classList.toggle('hide', heroMostlyVisible || rsvpVisible); } // không che hero và form
-new IntersectionObserver(([e]) => { rsvpVisible = e.isIntersecting; syncFab(); }, { threshold: 0.05 }).observe($('#rsvp'));
-
-/* ================= Màn mở thiệp ================= */
-function onOpen() { if (music) setPlaying(music.start()); $('#intro-ui').classList.add('fade'); }
-function onReveal() { $('#intro').classList.add('fade'); }
-function onDone() {
-  for (const id of ['intro', 'intro-ui']) { const el = document.getElementById(id); if (el) el.remove(); }
-  document.body.classList.remove('intro');
-  musicBtn.hidden = !music;
-  fab.hidden = false;
-}
-
-// Texture 3D có chữ nên chờ font (tối đa 3s); không có WebGL / three.js thì bỏ qua màn mở thiệp
-const fontsReady = document.fonts ? Promise.all(['72px "Pinyon Script"', '60px "Great Vibes"', 'italic 30px "Cormorant Garamond"', '600 36px "Playfair Display"']
-  .map(f => document.fonts.load(f, 'Long & Phương Anh 0123'))).catch(() => {}) : Promise.resolve();
-Promise.race([fontsReady, new Promise(r => setTimeout(r, 3000))]).then(() => {
-  try {
-    if (!window.THREE) throw new Error('Không tải được three.js');
-    scene3d = startScene({ guest, onOpen, onReveal, onDone });
-    $('#open-btn').addEventListener('click', scene3d.open);
-  } catch (err) {
-    console.warn(err);
-    onDone();
-  }
-});
