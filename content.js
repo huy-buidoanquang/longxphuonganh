@@ -79,7 +79,7 @@ window.CONTENT = {
   "photos": {
     "hero": "images/hero-mvz7xwe10dahs.jpg",
     "album": [
-      "",
+      "images/album-mvz807jfcl9pv.jpg",
       "",
       "",
       "",
