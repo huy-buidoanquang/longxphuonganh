@@ -25,7 +25,7 @@
       <p>Nội dung thiệp được lưu thẳng vào kho GitHub <b>longxphuonganh</b>, nên cần một <b>mã truy cập GitHub</b> có quyền ghi vào kho này. Mã chỉ lưu trong trình duyệt của máy này.</p>
       <ol>
         <li>Mở <a href="https://github.com/settings/personal-access-tokens/new?name=Quan+tri+thiep+cuoi&amp;description=Sua+noi+dung+thiep+longxphuonganh&amp;target_name=huy-buidoanquang&amp;expires_in=90&amp;contents=write" target="_blank" rel="noopener">trang tạo mã của GitHub</a> bằng tài khoản chủ kho.</li>
-        <li><b>Repository access</b>: chọn <i>Only select repositories</i> rồi chọn <b>longxphuonganh</b>.</li>
+        <li><b>Repository access</b>: chọn <i>Only select repositories</i> rồi chọn <b>longxphuonganh</b> (và <b>longxphuonganh-khach</b> nếu đã tạo kho riêng tư để đồng bộ danh sách khách, xem tab Khách mời).</li>
         <li><b>Permissions → Repository permissions → Contents</b>: chọn <i>Read and write</i>.</li>
         <li>Bấm <b>Generate token</b>, sao chép mã (bắt đầu bằng <code>github_pat_</code>) và dán vào ô dưới.</li>
       </ol>
@@ -50,9 +50,9 @@
   <section class="tab" id="tab-guests" hidden>
     <div class="card">
       <h2>Link chung</h2>
-      <p class="note">Gửi vào nhóm chat, hoặc cho khách chưa có trong danh sách.</p>
-      <div class="linkrow"><span>Nhà trai</span><input readonly id="link-trai" aria-label="Link nhà trai"><button type="button" data-copy="link-trai">Copy</button></div>
-      <div class="linkrow"><span>Nhà gái</span><input readonly id="link-gai" aria-label="Link nhà gái"><button type="button" data-copy="link-gai">Copy</button></div>
+      <p class="note">Gửi vào nhóm chat, hoặc cho khách chưa có trong danh sách. Trên điện thoại, nút Zalo / Messenger mở bảng chia sẻ của máy; trên máy tính, lời mời được copy sẵn và Zalo / Messenger bản web mở ra để dán.</p>
+      <div class="linkrow"><span>Nhà trai</span><input readonly id="link-trai" aria-label="Link nhà trai"><button type="button" data-send="zalo" data-of="link-trai">Zalo</button><button type="button" data-send="messenger" data-of="link-trai">Messenger</button><button type="button" data-copy="link-trai">Copy</button></div>
+      <div class="linkrow"><span>Nhà gái</span><input readonly id="link-gai" aria-label="Link nhà gái"><button type="button" data-send="zalo" data-of="link-gai">Zalo</button><button type="button" data-send="messenger" data-of="link-gai">Messenger</button><button type="button" data-copy="link-gai">Copy</button></div>
     </div>
 
     <div class="card">
@@ -77,13 +77,25 @@
       </form>
       <div class="row-inline tools">
         <input type="search" id="g-q" placeholder="Tìm tên…" aria-label="Tìm khách">
-        <select id="g-filter" aria-label="Lọc khách"><option value="">Tất cả</option><option value="trai">Nhà trai</option><option value="gai">Nhà gái</option><option value="todo">Chưa copy link</option></select>
+        <select id="g-filter" aria-label="Lọc khách"><option value="">Tất cả</option><option value="trai">Nhà trai</option><option value="gai">Nhà gái</option><option value="todo">Chưa gửi</option></select>
         <button type="button" id="g-export">Tải file Excel (CSV)</button>
         <button type="button" class="danger" id="g-clear">Xoá tất cả</button>
       </div>
-      <p class="note">Danh sách chỉ lưu trong trình duyệt này (kho GitHub của thiệp để công khai). Tải file để giữ bản sao hoặc chuyển sang máy khác.</p>
+      <p id="g-sync" class="note" role="status"></p>
+      <div id="g-setup" class="setup" hidden>
+        <b>Đồng bộ danh sách giữa các máy</b> (làm một lần). Tên khách được lưu trong một kho GitHub riêng tư, chỉ tài khoản của bạn xem được:
+        <ol>
+          <li><a href="https://github.com/new?name=longxphuonganh-khach&amp;visibility=private&amp;description=Danh+s%C3%A1ch+kh%C3%A1ch+m%E1%BB%9Di+(ri%C3%AAng+t%C6%B0)" target="_blank" rel="noopener">Tạo kho mới</a> tên <b>longxphuonganh-khach</b>, chọn <b>Private</b>, bấm <i>Create repository</i>.</li>
+          <li>Mở <a href="https://github.com/settings/personal-access-tokens" target="_blank" rel="noopener">danh sách mã truy cập</a>, bấm vào mã đang dùng → <i>Edit</i> → <b>Repository access</b>: chọn thêm <b>longxphuonganh-khach</b> → <i>Update</i>.</li>
+        </ol>
+        <button type="button" id="g-retry">Kiểm tra lại</button>
+      </div>
+      <div id="g-public" class="setup" hidden>
+        Kho <b>longxphuonganh-khach</b> đang để công khai nên chưa đồng bộ (ai cũng xem được tên khách). Mở <a href="https://github.com/huy-buidoanquang/longxphuonganh-khach/settings" target="_blank" rel="noopener">cài đặt của kho</a> → <i>Danger Zone</i> → <i>Change visibility</i> → <b>Make private</b>.
+        <button type="button" id="g-retry2">Kiểm tra lại</button>
+      </div>
       <table class="gtable">
-        <thead><tr><th>Khách</th><th>Bên</th><th>Link mời</th><th></th><th></th></tr></thead>
+        <thead><tr><th>Khách</th><th>Bên</th><th>Link mời</th><th>Gửi lời mời</th><th></th></tr></thead>
         <tbody id="g-body"></tbody>
       </table>
     </div>

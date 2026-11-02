@@ -90,9 +90,12 @@ body.show-pv .pv { display: flex; flex-direction: column; position: fixed; inset
 @media (max-width: 719px) { .bar { flex-wrap: wrap; } #status { flex-basis: 100%; } .bar button { flex: 1; } body { padding-bottom: 130px; } }
 .toast { position: fixed; left: 50%; bottom: 84px; translate: -50% 0; z-index: 50; background: var(--ink); color: #fff; padding: 10px 16px; border-radius: 10px; font-size: 14px; max-width: calc(100vw - 32px); }
 
-.linkrow { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.linkrow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 8px; }
 .linkrow > span { width: 64px; flex: none; font-weight: 600; font-size: 14px; }
-.linkrow input { flex: 1; min-width: 0; }
+.linkrow input { flex: 1 1 200px; min-width: 0; width: auto; }
+.setup { background: var(--cream); border: 1px dashed var(--line); border-radius: 10px; padding: 10px 14px; margin: 8px 0; font-size: 14px; }
+.setup ol { padding-left: 20px; margin: 6px 0 10px; }
+.note.ok { color: var(--ok); }
 .row-inline { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 8px 0; }
 .row-inline > input { flex: 1 1 200px; width: auto; }
 .row-inline > select, .row-inline label select { width: auto; }
@@ -108,6 +111,7 @@ body.show-pv .pv { display: flex; flex-direction: column; position: fixed; inset
 .g-link a { color: var(--muted); }
 .gtable select { width: auto; min-height: 36px; padding: 4px 6px; }
 .gtable button { min-height: 36px; padding: 4px 10px; white-space: nowrap; }
+.g-send button + button { margin-left: 4px; }
 .gtable .empty { text-align: center; color: var(--muted); padding: 16px; }
 @media (max-width: 719px) {
   .gtable thead { display: none; }
@@ -116,5 +120,8 @@ body.show-pv .pv { display: flex; flex-direction: column; position: fixed; inset
   .gtable td.g-name { grid-column: 1 / -1; }
   .gtable td.g-link { grid-column: 1 / -1; max-width: none; font-size: 12.5px; }
   .gtable td:nth-child(2) { grid-row: 3; }
+  .gtable td.g-del { grid-row: 3; grid-column: 3; }
+  .gtable td.g-send { grid-column: 1 / -1; grid-row: 4; display: flex; gap: 6px; }
+  .gtable td.g-send button { flex: 1; margin: 0; }
   .gtable .empty { grid-column: 1 / -1; }
 }

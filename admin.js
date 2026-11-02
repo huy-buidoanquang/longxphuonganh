@@ -1,18 +1,18 @@
 'use strict';
-/* Trang quản trị thiệp cưới: https://admin.longxphuonganh.pages.dev
+/* Trang quản trị thiệp cưới: https://admin.longxphuonganh.pages.dev hoặc https://longxphuonganh-wedding.site/admin/
    - Mã nguồn ở thư mục admin/ trên nhánh main. Nhánh "admin" chỉ chứa thư mục này (ở gốc) để Cloudflare Pages đưa lên tên miền admin.
      Sau khi sửa admin/ và commit lên main:
        git push origin "$(git commit-tree HEAD:admin -p origin/admin -m 'Cập nhật trang quản trị')":refs/heads/admin
    - Nội dung thiệp nằm ở content.js (nhánh main), lưu qua GitHub API bằng mã truy cập của người quản trị.
      Mỗi lần lưu là một commit; Cloudflare Pages tự đưa bản mới lên thiệp.
-   - Danh sách khách mời chỉ lưu trong trình duyệt (localStorage) vì kho GitHub để công khai. */
+   - Danh sách khách mời lưu trong trình duyệt và đồng bộ qua kho riêng tư longxphuonganh-khach (kho của thiệp để công khai). */
 (() => {
   const REPO = 'huy-buidoanquang/longxphuonganh', BRANCH = 'main', API = 'https://api.github.com/repos/' + REPO;
-  // Thiệp chính: admin.x.pages.dev hay <mã bản dựng>.x.pages.dev -> x.pages.dev; admin.<tên miền riêng> -> <tên miền riêng>;
-  // mở ở /admin/ của chính trang thiệp (hoặc máy cục bộ) thì thiệp ở thư mục cha. Link mời khách dựa vào đây nên không được trỏ nhầm.
-  const host = location.hostname;
-  const SITE = host.endsWith('.pages.dev') ? `https://${host.split('.').slice(-3).join('.')}/`
-    : host.startsWith('admin.') ? `https://${host.slice(6)}/` : new URL('../', location.href).href;
+  const GUEST_REPO = 'longxphuonganh-khach', DATA = 'https://api.github.com/repos/huy-buidoanquang/' + GUEST_REPO;
+  // Thiệp chính (link mời khách, ảnh xem trước khi gửi link): mở admin ở tên miền thật (admin., <mã bản dựng>.pages.dev, tên miền riêng)
+  // thì luôn là tên miền riêng; mở ở máy cục bộ thì thiệp ở thư mục cha.
+  const SITE = /(^|\.)longxphuonganh\.pages\.dev$|^longxphuonganh-wedding\.site$/.test(location.hostname)
+    ? 'https://longxphuonganh-wedding.site/' : new URL('../', location.href).href;
   const ORIGIN = new URL(SITE).origin;
   const $ = (s, r = document) => r.querySelector(s), $$ = (s, r = document) => [...r.querySelectorAll(s)];
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
@@ -38,12 +38,13 @@
     $$('[data-tab]').forEach(x => x.setAttribute('aria-selected', x === b));
     $$('.tab').forEach(s => { s.hidden = s.id !== 'tab-' + b.dataset.tab; });
     $('#bar').hidden = b.dataset.tab !== 'content' || !draft;
+    if (b.dataset.tab === 'guests') sync();
   }));
 
   // ---------- GitHub ----------
   let token = store.get('gh-token', '');
-  async function gh(path, { method = 'GET', body, raw } = {}) {
-    const r = await fetch(API + path, {
+  async function gh(path, { method = 'GET', body, raw } = {}) { // path: đường dẫn trong kho thiệp, hoặc URL đầy đủ
+    const r = await fetch(path.startsWith('https:') ? path : API + path, {
       method, body: body && JSON.stringify(body),
       headers: { Authorization: 'Bearer ' + token, Accept: raw ? 'application/vnd.github.raw+json' : 'application/vnd.github+json', ...(body && { 'Content-Type': 'application/json' }) },
     });
@@ -77,6 +78,7 @@
       $('#bar').hidden = $('#tab-content').hidden;
       status('Chưa có thay đổi');
       refreshPreview(true);
+      initSync();
     } catch (e) {
       draft = null;
       if (e.status === 401) { token = ''; store.set('gh-token', ''); }
@@ -133,7 +135,7 @@
       sec('Cô dâu', fields('bride.', PERSON) + bank('bride')),
       sec('Thiệp nhà trai <small>— link mặc định</small>', fields('trai.', SIDE) + list('trai.schedule', 'schedule')),
       sec('Thiệp nhà gái <small>— link có ?nha=gai</small>', fields('gai.', SIDE) + list('gai.schedule', 'schedule')),
-      sec('Ảnh cưới', '<div class="wide"><div class="lh">Ảnh bìa (trong phong bì; cũng là ảnh hiện khi gửi link qua Zalo, Messenger)</div><div class="photo hero-photo" id="hero"></div></div>' + list('photos.album', 'album')),
+      sec('Ảnh cưới', '<div class="wide"><div class="lh">Ảnh bìa (trong phong bì; cũng là ảnh hiện khi gửi link qua Zalo, Messenger. Chưa có ảnh thì dùng ảnh tấm thiệp)</div><div class="photo hero-photo" id="hero"></div></div>' + list('photos.album', 'album')),
       sec('Nhạc nền', '<div class="wide" id="music"></div>'),
       sec('Xác nhận tham dự & lời chúc', field('rsvp.email', 'Email nhận xác nhận tham dự', 'VD: tencuaban@gmail.com', 'email')
         + field('rsvp.endpoint', 'Link Google Apps Script (không bắt buộc)', 'https://script.google.com/macros/s/…/exec', 'url')
@@ -193,7 +195,11 @@
   form.addEventListener('click', e => {
     const b = e.target.closest('button[data-act]');
     if (!b) return;
-    if (b.dataset.act === 'clear') { set(draft, b.dataset.target, ''); drawHero(); drawMusic(); return changed(); }
+    if (b.dataset.act === 'clear') {
+      set(draft, b.dataset.target, '');
+      if (b.dataset.target === 'photos.hero') draft.photos.og = '';
+      drawHero(); drawMusic(); return changed();
+    }
     const lst = b.closest('[data-list]'), arr = get(draft, lst.dataset.list), i = +b.closest('[data-i]')?.dataset.i;
     if (b.dataset.act === 'add') arr.push(LISTS[lst.dataset.kind].blank());
     if (b.dataset.act === 'del') arr.splice(i, 1);
@@ -211,7 +217,7 @@
       else {
         const paths = [];
         for (const f of files) paths.push(await addImage(f, inp.dataset.img));
-        if (inp.dataset.img === 'hero') { draft.photos.hero = paths[0]; drawHero(); }
+        if (inp.dataset.img === 'hero') { draft.photos.hero = paths[0]; draft.photos.og = await addShareImage(files[0]); drawHero(); }
         else { if (row) draft.photos.album[+row.dataset.i] = paths[0]; else draft.photos.album.push(...paths); drawList(lst); }
       }
       changed();
@@ -228,6 +234,19 @@
     c.getContext('2d').drawImage(bmp, 0, 0, c.width, c.height);
     bmp.close();
     const path = `images/${name}-${uid()}.jpg`;
+    uploads.set(path, { url: c.toDataURL('image/jpeg', .85), pending: true });
+    return path;
+  }
+  // Ảnh hiện khi gửi link (1200×630, Zalo/Messenger cắt về khổ ngang): ảnh bìa đặt trọn ở giữa, nền là chính ảnh đó phóng to, mờ và tối đi
+  async function addShareImage(file) {
+    const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }), W = 1200, H = 630;
+    const c = Object.assign(document.createElement('canvas'), { width: W, height: H }), g = c.getContext('2d');
+    const draw = k => g.drawImage(bmp, (W - bmp.width * k) / 2, (H - bmp.height * k) / 2, bmp.width * k, bmp.height * k);
+    g.fillStyle = '#511419'; g.fillRect(0, 0, W, H);
+    g.filter = 'blur(24px) brightness(.55)'; draw(Math.max(W / bmp.width, H / bmp.height) * 1.15);
+    g.filter = 'none'; draw(Math.min(W / bmp.width, H / bmp.height));
+    bmp.close();
+    const path = `images/og-${uid()}.jpg`;
     uploads.set(path, { url: c.toDataURL('image/jpeg', .85), pending: true });
     return path;
   }
@@ -272,14 +291,25 @@
     for (const p of ['groom', 'bride']) { const b = draft[p].bank; if (b.account && !b.code) return bad(p + '.bank.name', 'Chưa chọn ngân hàng cho số tài khoản'); }
     return '';
   }
-  // Tiêu đề và ảnh xem trước khi gửi link (Zalo, Messenger đọc từ HTML, không chạy JS)
+  // Thẻ xem trước khi gửi link (Zalo, Messenger đọc từ HTML, không chạy JS); data-gai là bản cho link ?nha=gai (functions/index.js chọn)
+  const WD = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
+  const partyLine = s => {
+    const [y, m, d, h, mi] = s.partyAt.split(/\D/).map(Number);
+    return `Tiệc cưới ${p2(h)}:${p2(mi)} ${WD[new Date(Date.UTC(y, m - 1, d)).getUTCDay()]} ${p2(d)}.${p2(m)}.${y}${s.venue ? ' · ' + s.venue : ''}`;
+  };
   function patchMeta(html) {
-    const names = `${draft.groom.name} & ${draft.bride.name}`, hero = draft.photos.hero;
-    html = html.replace(/<title>[^<]*<\/title>/, () => `<title>${esc(names)} — Thiệp cưới</title>`)
-      .replace(/(<meta name="description" content=")[^"]*/, (_, a) => a + esc('Trân trọng kính mời bạn đến dự lễ cưới của ' + names))
-      .replace(/(<meta property="og:title" content=")[^"]*/, (_, a) => a + esc(names + ' — Thiệp cưới'))
-      .replace(/\n[ \t]*<meta property="og:image" content="[^"]*">/, '');
-    return hero ? html.replace(/<meta property="og:description"[^>]*>/, m => `${m}\n  <meta property="og:image" content="${esc(new URL(hero, SITE).href)}">`) : html;
+    const g = draft.groom.name, b = draft.bride.name, names = `${g} & ${b}`, og = draft.photos.og;
+    const meta = (prop, v, gai = v) => {
+      html = html.replace(new RegExp(`(<meta (?:property|name)="${prop}" content=")[^"]*(?:(" data-gai=")[^"]*)?`), (_, a, d) => a + esc(v) + (d ? d + esc(gai) : ''));
+    };
+    html = html.replace(/<title>[^<]*<\/title>/, () => `<title>${esc(names)} — Thiệp cưới</title>`);
+    meta('description', 'Trân trọng kính mời bạn đến dự lễ cưới của ' + names);
+    meta('og:site_name', 'Thiệp cưới ' + names);
+    meta('og:title', names + ' — Thiệp cưới', `${b} & ${g} — Thiệp cưới`);
+    meta('og:description', partyLine(draft.trai), partyLine(draft.gai));
+    meta('og:image', new URL(og || 'images/og.jpg', SITE).href, new URL(og || 'images/og-gai.jpg', SITE).href);
+    meta('og:image:alt', 'Thiệp cưới ' + names);
+    return html;
   }
   async function publish() {
     const err = validate();
@@ -378,39 +408,63 @@
     };
   })();
 
-  // ---------- Khách mời: tạo link mời riêng, copy để gửi ----------
+  // ---------- Khách mời: link mời riêng, gửi qua Zalo / Messenger, đồng bộ giữa các máy ----------
+  // Mỗi khách có t (lúc sửa sau cùng) để gộp giữa các máy; khách bị xoá còn lại {id, del: 1, t} để máy khác xoá theo.
   let guests = store.get('guests', []);
+  const live = () => guests.filter(g => !g.del);
   const linkOf = g => SITE + '?' + new URLSearchParams(g.side === 'gai' ? { nha: 'gai', to: g.name } : { to: g.name });
   const sideOf = (v, def) => (/gai|co dau/.test(norm(v)) ? 'gai' : /trai|chu re/.test(norm(v)) ? 'trai' : def);
-  const saveGuests = () => { store.set('guests', guests); drawGuests(); };
+  const saveGuests = () => { store.set('guests', guests); drawGuests(); later(); };
+  const markSent = g => { g.sent = g.t = Date.now(); saveGuests(); };
   const gmsg = m => { $('#g-msg').textContent = m; };
   $('#link-trai').value = SITE;
   $('#link-gai').value = SITE + '?nha=gai';
   $$('[data-copy]').forEach(b => b.addEventListener('click', () => copy($('#' + b.dataset.copy).value)));
 
+  // Gửi lời mời. Điện thoại: mở bảng chia sẻ của máy, chọn Zalo / Messenger rồi chọn người nhận.
+  // Máy tính: Zalo, Messenger không cho mở sẵn cuộc trò chuyện từ trang web, nên copy lời mời rồi mở bản web để dán.
+  const APPS = { zalo: ['Zalo', 'https://chat.zalo.me/'], messenger: ['Messenger', 'https://www.messenger.com/'] };
+  const couple = side => (draft ? (side === 'gai' ? [draft.bride, draft.groom] : [draft.groom, draft.bride]).map(p => p.name).join(' & ') : '');
+  const invite = (who, side, link) => `Trân trọng kính mời ${who} đến dự lễ cưới của ${couple(side) || 'chúng tôi'}.\nThiệp mời: ${link}`;
+  async function send(app, text) {
+    if (navigator.share && matchMedia('(pointer: coarse)').matches) {
+      try { await navigator.share({ text }); return true; } catch (e) { if (e.name === 'AbortError') return false; } // lỗi khác: copy như máy tính
+    }
+    await copy(text, 'lời mời');
+    window.open(APPS[app][1], '_blank', 'noopener');
+    toast(`Đã copy lời mời. Mở cuộc trò chuyện trên ${APPS[app][0]} rồi dán (Ctrl+V) để gửi.`);
+    return true;
+  }
+  $$('[data-send]').forEach(b => b.addEventListener('click', () => {
+    const link = $('#' + b.dataset.of).value;
+    send(b.dataset.send, invite('bạn', link.includes('nha=gai') ? 'gai' : 'trai', link));
+  }));
+
   function drawGuests() {
-    const q = norm($('#g-q').value), f = $('#g-filter').value;
-    const shown = guests.filter(g => (!q || norm(g.name + ' ' + g.note).includes(q)) && (!f || (f === 'todo' ? !g.sent : g.side === f)));
-    $('#g-count').textContent = guests.length ? `· ${guests.length} khách, ${guests.filter(g => g.sent).length} đã copy link` : '';
+    const q = norm($('#g-q').value), f = $('#g-filter').value, all = live();
+    const shown = all.filter(g => (!q || norm(g.name + ' ' + g.note).includes(q)) && (!f || (f === 'todo' ? !g.sent : g.side === f)));
+    $('#g-count').textContent = all.length ? `· ${all.length} khách, ${all.filter(g => g.sent).length} đã gửi` : '';
     $('#g-body').innerHTML = shown.map(g => {
       const l = linkOf(g);
       return `<tr data-id="${g.id}"${g.sent ? ' class="sent"' : ''}>
         <td class="g-name"><b>${esc(g.name)}</b>${g.note ? `<small>${esc(g.note)}</small>` : ''}</td>
         <td><select data-act="side" aria-label="Bên của ${esc(g.name)}"><option value="trai">Nhà trai</option><option value="gai"${g.side === 'gai' ? ' selected' : ''}>Nhà gái</option></select></td>
         <td class="g-link"><a href="${esc(l)}" target="_blank" rel="noopener">${esc(decodeURIComponent(l.replace(/\+/g, ' ')).replace(/^https?:\/\//, ''))}</a></td>
-        <td><button type="button" data-act="copy">${g.sent ? 'Copy lại' : 'Copy link'}</button></td>
-        <td><button type="button" data-act="del" aria-label="Xoá ${esc(g.name)}">×</button></td></tr>`;
-    }).join('') || `<tr><td colspan="5" class="empty">${guests.length ? 'Không có khách khớp bộ lọc.' : 'Chưa có khách nào. Nhập danh sách ở trên hoặc thêm từng khách.'}</td></tr>`;
+        <td class="g-send"><button type="button" data-act="zalo" aria-label="Gửi ${esc(g.name)} qua Zalo">Zalo</button><button type="button" data-act="messenger" aria-label="Gửi ${esc(g.name)} qua Messenger">Messenger</button><button type="button" data-act="copy">${g.sent ? 'Copy lại' : 'Copy link'}</button></td>
+        <td class="g-del"><button type="button" data-act="del" aria-label="Xoá ${esc(g.name)}">×</button></td></tr>`;
+    }).join('') || `<tr><td colspan="5" class="empty">${all.length ? 'Không có khách khớp bộ lọc.' : 'Chưa có khách nào. Nhập danh sách ở trên hoặc thêm từng khách.'}</td></tr>`;
   }
-  $('#g-body').addEventListener('click', e => {
+  $('#g-body').addEventListener('click', async e => {
     const b = e.target.closest('button[data-act]'), g = b && guests.find(x => x.id === b.closest('tr').dataset.id);
     if (!g) return;
-    if (b.dataset.act === 'copy') { copy(linkOf(g), 'link mời ' + g.name); g.sent = Date.now(); saveGuests(); }
-    if (b.dataset.act === 'del' && confirm(`Xoá khách "${g.name}"?`)) { guests = guests.filter(x => x !== g); saveGuests(); }
+    const act = b.dataset.act;
+    if (act === 'copy') { copy(linkOf(g), 'link mời ' + g.name); markSent(g); }
+    if (act in APPS && await send(act, invite(g.name, g.side, linkOf(g)))) markSent(g);
+    if (act === 'del' && confirm(`Xoá khách "${g.name}"?`)) { guests = guests.map(x => (x === g ? { id: g.id, del: 1, t: Date.now() } : x)); saveGuests(); }
   });
   $('#g-body').addEventListener('change', e => {
     const g = guests.find(x => x.id === e.target.closest('tr')?.dataset.id);
-    if (g && e.target.dataset.act === 'side') { g.side = e.target.value; saveGuests(); }
+    if (g && e.target.dataset.act === 'side') { g.side = e.target.value; g.t = Date.now(); saveGuests(); }
   });
   $('#g-q').addEventListener('input', drawGuests);
   $('#g-filter').addEventListener('change', drawGuests);
@@ -418,11 +472,80 @@
     e.preventDefault();
     const f = e.target, name = f.gname.value.normalize('NFC').trim().replace(/\s+/g, ' '), side = f.gside.value;
     if (!name) return;
-    if (guests.some(g => norm(g.name) === norm(name) && g.side === side)) return toast('Khách này đã có trong danh sách');
-    guests.unshift({ id: uid(), name, side, note: '' });
+    if (live().some(g => norm(g.name) === norm(name) && g.side === side)) return toast('Khách này đã có trong danh sách');
+    guests.unshift({ id: uid(), name, side, note: '', t: Date.now() });
     saveGuests();
     f.gname.value = ''; f.gname.focus();
   });
+
+  // Đồng bộ: guests.json trong kho riêng tư (kho thiệp để công khai nên không đưa tên khách vào đó).
+  // Tải bản trên kho, gộp với máy này (mỗi khách lấy bản sửa sau cùng), có khác thì lưu lại; máy khác vừa lưu (409) thì làm lại.
+  let syncOn = false, syncing = false, again = false, syncTimer = 0;
+  const syncMsg = (m, cls = '') => { const s = $('#g-sync'); s.textContent = m; s.className = 'note ' + cls; };
+  const sig = l => l.map(g => JSON.stringify(g, Object.keys(g).sort())).sort().join('\n');
+  const b64 = s => { const u = new TextEncoder().encode(s); let r = ''; for (let i = 0; i < u.length; i += 32768) r += String.fromCharCode(...u.subarray(i, i + 32768)); return btoa(r); };
+  const unb64 = s => new TextDecoder().decode(Uint8Array.from(atob(s.replace(/\s/g, '')), c => c.charCodeAt(0)));
+  // shortcut: t lấy theo đồng hồ từng máy, máy chạy nhanh vài giây có thể thắng bản sửa mới hơn; cần chặt hơn thì đánh số phiên bản theo kho.
+  function merge(a, b) {
+    const m = new Map(), newer = (x, y) => (x.t || 0) > (y.t || 0) || ((x.t || 0) === (y.t || 0) && x.del && !y.del);
+    for (const g of [...a, ...b]) if (!m.has(g.id) || newer(g, m.get(g.id))) m.set(g.id, g);
+    // Hai máy cùng nhập một danh sách trước khi đồng bộ: trùng tên + bên thì giữ khách có id nhỏ nhất (máy nào cũng chọn như nhau)
+    const first = new Map();
+    for (const g of [...m.values()].filter(x => !x.del).sort((x, y) => (x.id < y.id ? -1 : 1))) {
+      const k = norm(g.name) + g.side, s = first.get(k);
+      if (!s) { first.set(k, g); continue; }
+      const t = Math.max(s.t || 0, g.t || 0), keep = { ...s, t };
+      if (!keep.note) keep.note = g.note;
+      if ((g.sent || 0) > (keep.sent || 0)) keep.sent = g.sent;
+      first.set(k, keep); m.set(s.id, keep); m.set(g.id, { id: g.id, del: 1, t });
+    }
+    return [...m.values()];
+  }
+  async function pull() {
+    try { const f = await gh(`${DATA}/contents/guests.json?t=${Date.now()}`); return { list: JSON.parse(unb64(f.content)), sha: f.sha }; }
+    catch (e) { if (e.status === 404) return { list: [] }; throw e; } // kho mới chưa có file
+  }
+  const push = (list, sha) => gh(`${DATA}/contents/guests.json`, {
+    method: 'PUT', body: { message: 'Cập nhật danh sách khách mời', content: b64(`[\n${list.map(g => JSON.stringify(g)).join(',\n')}\n]\n`), ...(sha && { sha }) },
+  });
+  const later = () => { clearTimeout(syncTimer); if (syncOn) syncTimer = setTimeout(sync, 1500); };
+  async function sync() {
+    if (!syncOn) return;
+    if (syncing) { again = true; return; }
+    syncing = true; syncMsg('Đang đồng bộ…');
+    try {
+      for (let i = 0; ; i++) {
+        const { list, sha } = await pull(), merged = merge(guests, list);
+        if (sig(merged) !== sig(guests)) { guests = merged; store.set('guests', guests); drawGuests(); }
+        if (sig(merged) === sig(list)) break;
+        try { await push(merged, sha); break; } catch (e) { if (i >= 3 || (e.status !== 409 && e.status !== 422)) throw e; }
+      }
+      syncMsg(`Đã đồng bộ lúc ${new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}. Máy nào đăng nhập cũng thấy cùng danh sách.`, 'ok');
+    } catch (e) {
+      syncMsg(e.status === 401 ? 'Mã truy cập hết hạn, hãy đăng xuất rồi đăng nhập lại để đồng bộ.'
+        : e.status === 403 || e.status === 404 ? `Mã truy cập chưa có quyền ghi vào kho ${GUEST_REPO}. Danh sách vẫn lưu trên máy này.`
+          : `Chưa đồng bộ được (${e.message}). Danh sách vẫn lưu trên máy này, sẽ thử lại khi có thay đổi.`, 'err');
+    } finally {
+      syncing = false;
+      if (again) { again = false; sync(); }
+    }
+  }
+  async function initSync() {
+    $('#g-setup').hidden = true; $('#g-public').hidden = true;
+    try {
+      const r = await gh(DATA);
+      if (!r.private) { syncOn = false; $('#g-public').hidden = false; return syncMsg('Chưa đồng bộ: kho danh sách khách đang để công khai.', 'err'); }
+      syncOn = true; sync();
+    } catch (e) {
+      syncOn = false;
+      if (e.status === 404 || e.status === 403) { $('#g-setup').hidden = false; syncMsg('Danh sách đang lưu trong trình duyệt này.'); }
+      else syncMsg('Chưa kết nối được kho danh sách khách: ' + e.message, 'err');
+    }
+  }
+  $('#g-retry').addEventListener('click', initSync);
+  $('#g-retry2').addEventListener('click', initSync);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) sync(); }); // quay lại trang: lấy thay đổi từ máy khác
+  syncMsg('Danh sách đang lưu trong trình duyệt này. Đăng nhập ở tab Nội dung thiệp để đồng bộ giữa các máy.');
 
   // CSV/TSV có ô trong ngoặc kép (Excel dán ra dạng tab)
   function parseRows(t, d) {
@@ -469,7 +592,7 @@
       if (rows.some(r => sideOf(r[iName + 1] || '', ''))) { iSide = iName + 1; iNote = iName + 2; } else iNote = iName + 1;
     }
     if (iName < 0) iName = 0;
-    const have = new Set(guests.map(g => norm(g.name) + g.side));
+    const have = new Set(live().map(g => norm(g.name) + g.side)), t = Date.now();
     let added = 0, dup = 0;
     for (const r of rows) {
       const name = (r[iName] || '').normalize('NFC').replace(/\s+/g, ' ').slice(0, 60);
@@ -477,7 +600,7 @@
       const side = iSide >= 0 ? sideOf(r[iSide] || '', def) : def, key = norm(name) + side;
       if (have.has(key)) { dup++; continue; }
       have.add(key); added++;
-      guests.push({ id: uid(), name, side, note: iNote >= 0 ? (r[iNote] || '').slice(0, 100) : '' });
+      guests.push({ id: uid(), name, side, note: iNote >= 0 ? (r[iNote] || '').slice(0, 100) : '', t });
     }
     saveGuests();
     return { added, dup };
@@ -494,15 +617,18 @@
   });
   $('#g-export').addEventListener('click', () => {
     const q = v => `"${String(v ?? '').replace(/"/g, '""')}"`;
-    const rows = [['Tên khách', 'Bên', 'Ghi chú', 'Link mời', 'Đã copy link'],
-      ...guests.map(g => [g.name, g.side === 'gai' ? 'Nhà gái' : 'Nhà trai', g.note, linkOf(g), g.sent ? new Date(g.sent).toLocaleString('vi-VN') : ''])];
+    const rows = [['Tên khách', 'Bên', 'Ghi chú', 'Link mời', 'Đã gửi'],
+      ...live().map(g => [g.name, g.side === 'gai' ? 'Nhà gái' : 'Nhà trai', g.note, linkOf(g), g.sent ? new Date(g.sent).toLocaleString('vi-VN') : ''])];
     const a = Object.assign(document.createElement('a'), {
       href: URL.createObjectURL(new Blob(['\ufeff' + rows.map(r => r.map(q).join(',')).join('\r\n')], { type: 'text/csv;charset=utf-8' })), download: 'khach-moi.csv',
     });
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 1000);
   });
-  $('#g-clear').addEventListener('click', () => { if (guests.length && confirm(`Xoá toàn bộ ${guests.length} khách khỏi danh sách?`)) { guests = []; saveGuests(); } });
+  $('#g-clear').addEventListener('click', () => {
+    const n = live().length, t = Date.now();
+    if (n && confirm(`Xoá toàn bộ ${n} khách khỏi danh sách${syncOn ? ' (trên mọi máy)' : ''}?`)) { guests = guests.map(g => (g.del ? g : { id: g.id, del: 1, t })); saveGuests(); }
+  });
 
   drawGuests();
   if (token) login(); else $('#login').hidden = false;
