@@ -80,7 +80,7 @@ window.CONTENT = {
     "hero": "images/hero-mvz7xwe10dahs.jpg",
     "album": [
       "images/album-mvz807jfcl9pv.jpg",
-      "",
+      "images/album-mvz9wj6iovk0u.jpg",
       "",
       "",
       "",
