@@ -86,7 +86,8 @@ window.CONTENT = {
       "",
       "",
       ""
-    ]
+    ],
+    "og": "images/og-mvz8x85jlpm28.jpg"
   },
   "music": "",
   "inviteLabel": "Thân Mời",
