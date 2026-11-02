@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow">
+  <title>Quản trị thiệp cưới</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 24 24%27%3E%3Cpath fill=%27%23511419%27 d=%27M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z%27/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="admin.css">
+</head>
+<body>
+  <header class="top">
+    <h1>♡ Quản trị thiệp cưới</h1>
+    <nav class="tabs" role="tablist">
+      <button type="button" role="tab" data-tab="content" aria-selected="true">Nội dung thiệp</button>
+      <button type="button" role="tab" data-tab="guests" aria-selected="false">Khách mời</button>
+    </nav>
+    <a id="site-link" target="_blank" rel="noopener">Xem thiệp ↗</a>
+    <button type="button" id="logout" class="link" hidden>Đăng xuất</button>
+  </header>
+
+  <section class="tab" id="tab-content">
+    <form id="login" class="card login" hidden>
+      <h2>Đăng nhập</h2>
+      <p>Nội dung thiệp được lưu thẳng vào kho GitHub <b>longxphuonganh</b>, nên cần một <b>mã truy cập GitHub</b> có quyền ghi vào kho này. Mã chỉ lưu trong trình duyệt của máy này.</p>
+      <ol>
+        <li>Mở <a href="https://github.com/settings/personal-access-tokens/new?name=Quan+tri+thiep+cuoi&amp;description=Sua+noi+dung+thiep+longxphuonganh&amp;target_name=huy-buidoanquang&amp;expires_in=90&amp;contents=write" target="_blank" rel="noopener">trang tạo mã của GitHub</a> bằng tài khoản chủ kho.</li>
+        <li><b>Repository access</b>: chọn <i>Only select repositories</i> rồi chọn <b>longxphuonganh</b>.</li>
+        <li><b>Permissions → Repository permissions → Contents</b>: chọn <i>Read and write</i>.</li>
+        <li>Bấm <b>Generate token</b>, sao chép mã (bắt đầu bằng <code>github_pat_</code>) và dán vào ô dưới.</li>
+      </ol>
+      <label class="f"><span>Mã truy cập</span><input id="token" type="password" autocomplete="off" required placeholder="github_pat_…"></label>
+      <button class="primary">Đăng nhập</button>
+      <p class="err" id="login-err" role="alert"></p>
+    </form>
+    <p id="loading" class="note" hidden>Đang tải nội dung…</p>
+    <div id="editor" class="editor" hidden>
+      <form id="form" class="form" autocomplete="off"></form>
+      <aside class="pv" aria-label="Xem trước thiệp">
+        <div class="pv-bar">
+          <b>Xem trước</b>
+          <select id="pv-side" aria-label="Bản thiệp"><option value="trai">Nhà trai</option><option value="gai">Nhà gái</option></select>
+          <button type="button" class="link" id="pv-close">Đóng</button>
+        </div>
+        <iframe id="pv-frame" title="Xem trước thiệp"></iframe>
+      </aside>
+    </div>
+  </section>
+
+  <section class="tab" id="tab-guests" hidden>
+    <div class="card">
+      <h2>Link chung</h2>
+      <p class="note">Gửi vào nhóm chat, hoặc cho khách chưa có trong danh sách.</p>
+      <div class="linkrow"><span>Nhà trai</span><input readonly id="link-trai" aria-label="Link nhà trai"><button type="button" data-copy="link-trai">Copy</button></div>
+      <div class="linkrow"><span>Nhà gái</span><input readonly id="link-gai" aria-label="Link nhà gái"><button type="button" data-copy="link-gai">Copy</button></div>
+    </div>
+
+    <div class="card">
+      <h2>Nhập danh sách khách</h2>
+      <p class="note">Chọn file Excel (.xlsx) hoặc CSV, hoặc bôi đen các ô trong Excel / Google Sheets rồi dán vào ô bên dưới. Cột đầu là tên in trên thiệp (VD: <i>Anh Huy</i>, <i>Cô chú Tâm</i>). Có thêm cột <b>Bên</b> (Nhà trai / Nhà gái) và <b>Ghi chú</b> thì trang tự nhận.</p>
+      <input type="file" id="g-file" accept=".xlsx,.xls,.csv,.txt" aria-label="File danh sách khách">
+      <textarea id="g-paste" rows="4" placeholder="Hoặc dán danh sách vào đây, mỗi dòng một khách" aria-label="Dán danh sách khách"></textarea>
+      <div class="row-inline">
+        <label>Khách không ghi bên thì thuộc
+          <select id="g-side"><option value="trai">Nhà trai</option><option value="gai">Nhà gái</option></select></label>
+        <button type="button" class="primary" id="g-import">Thêm vào danh sách</button>
+      </div>
+      <p id="g-msg" class="note" role="status"></p>
+    </div>
+
+    <div class="card">
+      <h2>Danh sách khách mời <small id="g-count"></small></h2>
+      <form id="g-add" class="row-inline">
+        <input name="gname" placeholder="Thêm một khách, VD: Anh Huy" maxlength="60" required aria-label="Tên khách">
+        <select name="gside" aria-label="Bên"><option value="trai">Nhà trai</option><option value="gai">Nhà gái</option></select>
+        <button>Thêm</button>
+      </form>
+      <div class="row-inline tools">
+        <input type="search" id="g-q" placeholder="Tìm tên…" aria-label="Tìm khách">
+        <select id="g-filter" aria-label="Lọc khách"><option value="">Tất cả</option><option value="trai">Nhà trai</option><option value="gai">Nhà gái</option><option value="todo">Chưa copy link</option></select>
+        <button type="button" id="g-export">Tải file Excel (CSV)</button>
+        <button type="button" class="danger" id="g-clear">Xoá tất cả</button>
+      </div>
+      <p class="note">Danh sách chỉ lưu trong trình duyệt này (kho GitHub của thiệp để công khai). Tải file để giữ bản sao hoặc chuyển sang máy khác.</p>
+      <table class="gtable">
+        <thead><tr><th>Khách</th><th>Bên</th><th>Link mời</th><th></th><th></th></tr></thead>
+        <tbody id="g-body"></tbody>
+      </table>
+    </div>
+  </section>
+
+  <div class="bar" id="bar" hidden>
+    <span id="status" role="status"></span>
+    <button type="button" class="ghost" id="pv-open">Xem trước</button>
+    <button type="button" class="primary" id="publish" disabled>Lưu &amp; cập nhật thiệp</button>
+  </div>
+  <div class="toast" id="toast" role="status" hidden></div>
+  <datalist id="banks"></datalist>
+  <script src="admin.js"></script>
+</body>
+</html>
