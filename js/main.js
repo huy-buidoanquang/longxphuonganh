@@ -214,9 +214,9 @@
       [...dots.children].forEach((d, j) => d.classList.toggle('on', j === cur));
     }
     go(0);
-    // Tự chuyển ảnh mỗi 1,4 giây kể từ khi người xem cuộn tới album (như mẫu); không chạy khi đang xem ảnh lớn
+    // Tự chuyển ảnh mỗi 4 giây kể từ khi người xem cuộn tới album (xoay mất 1,1 giây, mỗi ảnh đứng yên ~3 giây); không chạy khi đang xem ảnh lớn
     let timer = 0;
-    const play = () => { clearInterval(timer); timer = setInterval(() => { if (lb.hidden) go(cur + 1); }, 1400); };
+    const play = () => { clearInterval(timer); timer = setInterval(() => { if (lb.hidden) go(cur + 1); }, 4000); };
     const nav = i => { go(i); if (timer) play(); };
     const cf = $('#cf');
     if (!reduce && N > 1) {
