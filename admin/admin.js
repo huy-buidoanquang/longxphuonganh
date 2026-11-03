@@ -106,6 +106,15 @@
     ['venue', 'Nơi đãi tiệc'], ['venueAddress', 'Địa chỉ nơi đãi tiệc'],
     ['map', 'Vị trí trên bản đồ', 'Toạ độ như 21.18,105.89 hoặc địa chỉ'], ['directions', 'Link nút "Chỉ đường"', 'https://maps.app.goo.gl/…', 'url'],
   ];
+  const IVORY = [
+    ['invite', 'Lời mời trên phong bì', 'Trân trọng\nkính mời!', 'area'], ['tap', 'Dòng nhắc mở thiệp', 'Chạm vào phong bì\nđể mở thiệp...', 'area'],
+    ['wedo', 'Dòng chữ dưới ảnh bìa', 'Cưới thôi!'], ['join', 'Lời mời trước tên cô dâu chú rể', 'Thân mời bạn đến dự\nlễ cưới của', 'area'],
+    ['stayTitle', 'Tiêu đề khối dưới bản đồ', 'Gia đình hai bên'], ['stay', 'Nội dung khối dưới bản đồ', 'Để trống: tên bố mẹ và địa chỉ hai nhà', 'area'],
+    ['attireTxt', 'Trang phục', 'Rất mong quý khách diện trang phục…', 'area'], ['transTxt', 'Đi lại', 'Quý khách vui lòng xem bản đồ chỉ đường…', 'area'],
+    ['accTxt', 'Chỗ nghỉ', 'Quý khách ở xa cần hỗ trợ chỗ nghỉ…', 'area'], ['giftsTxt', 'Mừng cưới', 'Sự hiện diện của quý khách là món quà…', 'area'],
+    ['menus', 'Thực đơn cho khách chọn (mỗi dòng một lựa chọn)', 'Thực đơn thường\nThực đơn chay\nKhông ăn được hải sản', 'area'],
+    ['msg', 'Lời cảm ơn cuối thiệp', 'Để trống: dùng lời cảm ơn cuối trang ở mục Khác', 'area'],
+  ];
   const field = (k, label, hint = '', type = 'text', wide) => `<label class="f${wide ? ' wide' : ''}"><span>${label}</span>${type === 'area'
     ? `<textarea data-k="${k}" rows="2" placeholder="${esc(hint)}"></textarea>`
     : `<input data-k="${k}" type="${type}" placeholder="${esc(hint)}">`}</label>`;
@@ -114,7 +123,7 @@
     ${field(p + '.bank.name', 'Ngân hàng', 'Gõ để chọn: Vietcombank, MBBank…')}${field(p + '.bank.account', 'Số tài khoản')}${field(p + '.bank.holder', 'Tên chủ tài khoản', 'VIẾT HOA KHÔNG DẤU')}</fieldset>`;
   const sec = (title, body, open) => `<details class="sec"${open ? ' open' : ''}><summary>${title}</summary><div class="sec-body">${body}</div></details>`;
   const list = (k, kind) => `<div class="list wide${kind === 'colors' ? ' colors' : ''}" data-list="${k}" data-kind="${kind}"></div>`;
-  const ICONS = [['', 'Không'], ['cake', 'Bánh cưới'], ['cook', 'Bàn tiệc'], ['camera', 'Máy ảnh']];
+  const ICONS = [['', 'Không'], ['cake', 'Bánh cưới'], ['cook', 'Bàn tiệc'], ['camera', 'Máy ảnh'], ['glass', 'Ly rượu (thiệp Ivory)'], ['disco', 'Khiêu vũ (thiệp Ivory)']];
   const LISTS = {
     schedule: {
       title: 'Lịch trình ngày cưới (bỏ hết thì ẩn mục này)', add: '+ Thêm mốc', blank: () => ({ time: '18:00', title: '', icon: '' }),
@@ -140,6 +149,8 @@
       sec('Xác nhận tham dự & lời chúc', field('rsvp.email', 'Email nhận xác nhận tham dự', 'VD: tencuaban@gmail.com', 'email')
         + field('rsvp.endpoint', 'Link Google Apps Script (không bắt buộc)', 'https://script.google.com/macros/s/…/exec', 'url')
         + '<p class="note wide">Có link Google Apps Script thì xác nhận và lời chúc của khách được lưu vào Google Sheet (xem file rsvp-google-sheet.gs trong kho). Để trống thì nút gửi mở email soạn sẵn tới email ở trên.</p>'),
+      sec('Thiệp mẫu Ivory <small>— trang /ivory/, ô trống thì dùng chữ mặc định</small>', fields('ivory.', IVORY)
+        + '<p class="note wide">Thiệp Ivory dùng chung tên, ngày giờ, địa điểm, lịch trình, ảnh và tài khoản mừng cưới ở các mục trên (tối đa 5 mốc lịch trình).</p>'),
       sec('Khác', field('inviteLabel', 'Lời mời trên màn mở thiệp', 'Thân Mời') + field('dressCode.note', 'Dòng ghi chú Dress code')
         + field('footer', 'Lời cảm ơn cuối trang', '', 'area', true) + list('dressCode.colors', 'colors')),
     ].join('');
