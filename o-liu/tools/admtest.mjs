@@ -1,4 +1,4 @@
-// node o-liu/tools/admtest.mjs: kiểm thử phần thiệp chính (mẫu Ô Liu) trong trang quản trị: 7 ô ảnh, mục "Chữ trên thiệp", lưu.
+// node o-liu/tools/admtest.mjs: kiểm thử phần thiệp chính (mẫu Ô Liu) trong trang quản trị: 5 ô ảnh, mục "Chữ trên thiệp", lưu.
 // GitHub API được giả lập (mã truy cập giả, không ghi gì lên GitHub)
 import { spawn } from 'node:child_process';
 import { createServer } from 'node:http';
@@ -60,16 +60,16 @@ await send('Page.reload');
 await until(`!!document.querySelector('#editor') && !document.querySelector('#editor').hidden`, 10000);
 const results = []; let fails = 0;
 const check = (n, ok, info = '') => { results.push(`${ok ? 'ĐẠT ' : 'LỖI '} ${n}${info ? ' — ' + info : ''}`); if (!ok) fails++; };
-const SLOTS = ['hero', 'hero2', 'calendar', 'groom', 'bride', 'guestbook', 'footer'];
+const SLOTS = ['hero', 'hero2', 'calendar', 'couple', 'footer'];
 
 check('trang quản trị tải nội dung (GitHub giả lập)', (await ev(`document.querySelector('#status').textContent`)).includes('Chưa có thay đổi'));
 const slots = JSON.parse(await ev(`JSON.stringify([...document.querySelectorAll('.slots .photo')].map(d => [d.dataset.slot, d.querySelector('.lh').textContent, d.querySelector('img.thumb')?.getAttribute('src') || '']))`));
-check('mục Ảnh cưới: 7 ô ảnh theo thứ tự trên thiệp', JSON.stringify(slots.map(s => s[0])) === JSON.stringify(SLOTS), slots.map(s => s[0] + ':' + s[1]).join(', '));
+check('mục Ảnh cưới: 5 ô ảnh theo thứ tự trên thiệp', JSON.stringify(slots.map(s => s[0])) === JSON.stringify(SLOTS), slots.map(s => s[0] + ':' + s[1]).join(', '));
 check('mỗi ô hiện ảnh đang dùng trong content.js', slots.every(([k, , src]) => src.endsWith(C0.photos[k])), slots.map(s => s[2].split('/').pop()).join(', '));
 check('album: 18 ảnh', (await ev(`document.querySelectorAll('[data-list="photos.album"] .photo').length`)) === C0.photos.album.length);
 const ol = JSON.parse(await ev(`JSON.stringify((() => { const sec = [...document.querySelectorAll('details.sec')].find(d => d.querySelector('summary').textContent.startsWith('Chữ trên thiệp'));
   return sec ? [...sec.querySelectorAll('[data-k]')].map(e => [e.dataset.k, e.placeholder]) : null; })())`));
-check('mục "Chữ trên thiệp": 7 ô chữ của thiệp chính', ol?.length === 7 && ol.every(([k]) => k.startsWith('oliu.')) && ol.find(([k]) => k === 'oliu.invite')?.[1] === 'tham dự tiệc chung vui\ncùng gia đình chúng tôi', ol?.map(o => o[0]).join(','));
+check('mục "Chữ trên thiệp": 5 ô chữ của thiệp chính', ol?.length === 5 && ol.every(([k]) => k.startsWith('oliu.')) && ol.find(([k]) => k === 'oliu.invite')?.[1] === 'tham dự tiệc chung vui\ncùng gia đình chúng tôi', ol?.map(o => o[0]).join(','));
 check('giờ làm lễ nhà trai (ngày âm lịch tự tính)', (await ev(`(() => { const i = document.querySelector('[data-k="trai.ceremonyAt"]'); return i.type === 'datetime-local' && i.value === ${JSON.stringify(C0.trai.ceremonyAt)} && i.closest('label').textContent.includes('âm lịch tự tính'); })()`)) === true);
 
 await upload('#ph-hero2 input[type=file]', IMG);

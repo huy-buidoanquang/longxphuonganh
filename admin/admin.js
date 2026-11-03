@@ -100,9 +100,9 @@
     ['father', 'Bố (Ông)'], ['mother', 'Mẹ (Bà)'], ['address', 'Địa chỉ gia đình', '', 'area'],
   ];
   const SIDE = [
-    ['ceremonyAt', 'Giờ làm lễ (lễ cử hành tại tư gia; ngày âm lịch tự tính)', '', 'datetime-local'], ['partyAt', 'Giờ tiệc cưới', '', 'datetime-local'],
+    ['ceremonyAt', 'Giờ làm lễ (lễ cử hành tại tư gia, không có nút bản đồ; ngày âm lịch tự tính)', '', 'datetime-local'], ['partyAt', 'Giờ tiệc cưới', '', 'datetime-local'],
     ['venue', 'Nơi đãi tiệc'], ['venueAddress', 'Địa chỉ nơi đãi tiệc'],
-    ['map', 'Vị trí trên bản đồ', 'Toạ độ như 21.18,105.89 hoặc địa chỉ'], ['directions', 'Link nút "Chỉ đường"', 'https://maps.app.goo.gl/…', 'url'],
+    ['map', 'Vị trí nơi đãi tiệc trên bản đồ', 'Toạ độ như 21.18,105.89 hoặc địa chỉ'], ['directions', 'Link nút "Xem bản đồ" của tiệc cưới', 'https://maps.app.goo.gl/…', 'url'],
   ];
   const IVORY = [
     ['invite', 'Lời mời trên phong bì', 'Trân trọng\nkính mời!', 'area'], ['tap', 'Dòng nhắc mở thiệp', 'Chạm vào phong bì\nđể mở thiệp...', 'area'],
@@ -116,13 +116,12 @@
   // Chữ trên thiệp chính (mẫu Ô Liu); ô trống thì dùng chữ mặc định của mẫu
   const OLIU = [
     ['guest', 'Tên khách khi link không có tên', 'Quý vị & Gia đình'], ['invite', 'Lời mời dưới tên khách', 'tham dự tiệc chung vui\ncùng gia đình chúng tôi', 'area'],
-    ['caption', 'Chữ dưới ảnh cạnh lịch', 'Moments'], ['rsvpLead', 'Lời nhắn ở mục Xác nhận tham dự', 'Mong quý khách báo trước giúp chúng tôi để việc đón tiếp được chu đáo nhất. Trân trọng!', 'area'],
-    ['guestbookLead', 'Lời nhắn ở Sổ lưu bút', 'Ký tên và gửi lời chúc đến chúng mình.'], ['giftThanks', 'Lời cảm ơn dưới mã QR mừng cưới', 'Sự hiện diện của bạn là món quà quý giá nhất đối với chúng tôi', 'area'],
+    ['caption', 'Chữ dưới ảnh cạnh lịch', 'Moments'], ['giftThanks', 'Lời cảm ơn dưới mã QR mừng cưới', 'Sự hiện diện của bạn là món quà quý giá nhất đối với chúng tôi', 'area'],
     ['thanksTitle', 'Tiêu đề cuối thiệp', 'Lời cảm ơn!'],
   ];
   // Các ô ảnh của thiệp chính; ô trống thì lấy ảnh trong album
   const SLOTS = [['hero', 'Ảnh bìa: khung lớn bên phải phong bì (cũng là ảnh khi gửi link qua Zalo, Messenger)'], ['hero2', 'Khung nhỏ bên trái phong bì'], ['calendar', 'Ảnh cạnh lịch'],
-    ['groom', 'Ảnh chú rể'], ['bride', 'Ảnh cô dâu'], ['guestbook', 'Ảnh nền Sổ lưu bút (khách ký tên lên ảnh)'], ['footer', 'Ảnh cuối thiệp']];
+    ['couple', 'Ảnh hai bạn (dưới tên cô dâu, chú rể)'], ['footer', 'Ảnh cuối thiệp']];
   const field = (k, label, hint = '', type = 'text', wide) => `<label class="f${wide ? ' wide' : ''}"><span>${label}</span>${type === 'area'
     ? `<textarea data-k="${k}" rows="2" placeholder="${esc(hint)}"></textarea>`
     : `<input data-k="${k}" type="${type}" placeholder="${esc(hint)}">`}</label>`;
@@ -134,13 +133,13 @@
   const ICONS = [['', 'Không'], ['cake', 'Bánh cưới'], ['cook', 'Bàn tiệc'], ['camera', 'Máy ảnh'], ['glass', 'Ly rượu (thiệp Ivory)'], ['disco', 'Khiêu vũ (thiệp Ivory)']];
   const LISTS = {
     schedule: {
-      title: 'Lịch trình ngày cưới (bỏ hết thì ẩn mục này)', add: '+ Thêm mốc', blank: () => ({ time: '18:00', title: '', icon: '' }),
+      title: 'Lịch trình ngày cưới (chỉ hiện trên thiệp mẫu Ivory; thiệp chính không có lịch trình)', add: '+ Thêm mốc', blank: () => ({ time: '18:00', title: '', icon: '' }),
       row: it => `<input type="time" data-f="time" value="${esc(it.time)}" aria-label="Giờ"><input data-f="title" value="${esc(it.title)}" placeholder="VD: Đón khách" aria-label="Tên mốc">`
         + `<select data-f="icon" aria-label="Biểu tượng">${ICONS.map(([v, n]) => `<option value="${v}"${v === (it.icon || '') ? ' selected' : ''}>${n}</option>`).join('')}</select>`,
     },
     colors: { title: 'Màu trang phục gợi ý (bỏ hết thì ẩn mục Dress code)', add: '+ Thêm màu', blank: () => '#c9a24a', row: c => `<input type="color" data-f="" value="${esc(c)}" aria-label="Màu">` },
     album: {
-      title: 'Album ảnh (bấm ảnh trên thiệp để xem lớn; bỏ hết thì ẩn album)',
+      title: 'Album ảnh (ảnh ngang chiếm cả hàng, ảnh dọc xếp hai ảnh một hàng; bấm ảnh trên thiệp để xem lớn; bỏ hết thì ẩn album)',
       row: (p, i) => (p ? `<img class="thumb" src="${esc(media(p))}" alt="Ảnh ${i + 1}">` : '<div class="thumb">Chưa có ảnh</div>')
         + '<label class="btn">Chọn ảnh<input type="file" accept="image/*" data-img="album"></label>',
     },
@@ -154,15 +153,14 @@
       sec('Thiệp nhà gái <small>— link có ?nha=gai</small>', fields('gai.', SIDE) + list('gai.schedule', 'schedule')),
       sec('Ảnh cưới', `<div class="wide photos slots">${SLOTS.map(([k, label]) => `<div class="photo" id="ph-${k}" data-slot="${k}" title="${esc(label)}"></div>`).join('')}</div>` + list('photos.album', 'album')),
       sec('Nhạc nền', '<div class="wide" id="music"></div>'),
-      sec('Xác nhận tham dự & lời chúc', field('rsvp.email', 'Email nhận xác nhận tham dự', 'VD: tencuaban@gmail.com', 'email')
+      sec('Xác nhận tham dự <small>— chỉ thiệp mẫu Ivory</small>', field('rsvp.email', 'Email nhận xác nhận tham dự', 'VD: tencuaban@gmail.com', 'email')
         + field('rsvp.endpoint', 'Link Google Apps Script (không bắt buộc)', 'https://script.google.com/macros/s/…/exec', 'url')
-        + '<p class="note wide">Có link Google Apps Script thì xác nhận và lời chúc của khách được lưu vào Google Sheet (xem file rsvp-google-sheet.gs trong kho). Để trống thì nút gửi mở email soạn sẵn tới email ở trên.</p>'),
+        + '<p class="note wide">Thiệp chính không có mục Xác nhận tham dự và Sổ lưu bút; mục này chỉ dùng cho thiệp mẫu Ivory. Có link Google Apps Script thì xác nhận của khách được lưu vào Google Sheet (xem file rsvp-google-sheet.gs trong kho). Để trống thì nút gửi mở email soạn sẵn tới email ở trên.</p>'),
       sec('Chữ trên thiệp <small>— ô trống thì dùng chữ của mẫu</small>', fields('oliu.', OLIU)
-        + '<p class="note wide">Link thiệp: mặc định là thiệp nhà trai, thêm ?nha=gai là thiệp nhà gái, ?nha=chung là thiệp chung (khách tự chọn nhà trai hoặc nhà gái). Ngày âm lịch, lịch tháng và đếm ngược tự tính theo giờ làm lễ.</p>'),
+        + '<p class="note wide">Link thiệp: mặc định là thiệp nhà trai, thêm ?nha=gai là thiệp nhà gái, ?nha=chung là thiệp chung (khách tự chọn nhà trai hoặc nhà gái). Ngày trên thiệp, trái tim trên lịch và đếm ngược lấy theo lễ sớm nhất của mỗi bên (nhà trai: lễ thành hôn; nhà gái: tiệc cưới trước lễ vu quy). Các lễ hiện theo thứ tự thời gian; ngày âm lịch tự tính.</p>'),
       sec('Thiệp mẫu Ivory <small>— trang /ivory/, ô trống thì dùng chữ mặc định</small>', fields('ivory.', IVORY)
         + '<p class="note wide">Thiệp Ivory dùng chung tên, ngày giờ, địa điểm, lịch trình, ảnh và tài khoản mừng cưới ở các mục trên (tối đa 5 mốc lịch trình).</p>'),
-      sec('Khác', field('inviteLabel', 'Lời mời trên màn mở thiệp', 'Thân Mời') + field('dressCode.note', 'Dòng ghi chú Dress code')
-        + field('footer', 'Lời cảm ơn cuối trang', '', 'area', true) + list('dressCode.colors', 'colors')),
+      sec('Khác', field('inviteLabel', 'Lời mời trên màn mở thiệp', 'Thân Mời') + field('footer', 'Lời cảm ơn cuối trang', '', 'area', true)),
     ].join('');
     $$('[data-k$=".bank.name"]').forEach(i => i.setAttribute('list', 'banks'));
     $$('#form [data-k]').forEach(el => { el.value = get(draft, el.dataset.k) ?? ''; });

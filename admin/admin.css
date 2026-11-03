@@ -62,6 +62,7 @@ legend { font-weight: 600; font-size: 13.5px; padding: 0 4px; }
 .photos { display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: 10px; margin-bottom: 12px; }
 .photo { display: flex; flex-direction: column; gap: 6px; }
 .thumb { width: 100%; aspect-ratio: 2 / 3; object-fit: cover; border-radius: 8px; border: 1px solid var(--line); background: var(--cream); display: flex; align-items: center; justify-content: center; color: var(--muted); font-size: 13px; text-align: center; }
+.list .thumb { object-fit: contain; }
 .photo .acts { display: flex; gap: 4px; }
 .photo .acts > * { flex: 1; min-width: 0; padding: 4px; text-align: center; }
 label.btn { display: inline-flex; align-items: center; justify-content: center; border: 1px solid var(--line); background: #fff; border-radius: 8px; padding: 8px 12px; min-height: 40px; cursor: pointer; font-size: 14px; }

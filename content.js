@@ -102,15 +102,14 @@ window.CONTENT = {
     "focus": {
       "images/groom-mw0gq575iqrk6.jpg": "50% 20%",
       "images/bride-mw0gq576f7vwl.jpg": "50% 20%",
-      "images/footer-mw0gq576kvxso.jpg": "50% 12%",
+      "images/footer-mw0gq576kvxso.jpg": "50% 0%",
       "images/album-mw0gq578perg9.jpg": "40% 50%",
       "images/album-mw0gq57apiigk.jpg": "40% 50%",
       "images/album-mw0gq57dijmyj.jpg": "80% 50%"
     },
     "hero2": "images/hero2-mw0gq574l4n9e.jpg",
     "calendar": "images/calendar-mw0gq575by7kq.jpg",
-    "groom": "images/groom-mw0gq575iqrk6.jpg",
-    "bride": "images/bride-mw0gq576f7vwl.jpg",
+    "couple": "images/album-mw0gq578perg9.jpg",
     "guestbook": "images/guestbook-mw0gq5768m2me.jpg",
     "footer": "images/footer-mw0gq576kvxso.jpg"
   },

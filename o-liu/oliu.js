@@ -147,12 +147,13 @@
       const venue = cer ? (S.ceremonyVenue ?? (person.address ? `Tư gia nhà ${side === 'gai' ? 'gái' : 'trai'}` : '')) : S.venue || '';
       const address = cer ? (S.ceremonyAddress ?? String(person.address || '').split('\n').join(', ')) : S.venueAddress || '';
       const q = cer ? (S.ceremonyMap || address) : (S.map || address);
-      const map = !cer && /^https:\/\//.test(S.directions || '') ? S.directions : q ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q) : '';
+      const map = cer ? '' : /^https:\/\//.test(S.directions || '') ? S.directions : q ? 'https://www.google.com/maps/search/?api=1&query=' + encodeURIComponent(q) : '';
       return { name: cer ? (S.ceremonyName || (side === 'gai' ? 'Lễ Vu Quy' : 'Lễ Thành Hôn')) : (S.partyName || 'Tiệc Cưới'), at, venue, address, map };
     };
-    const events = side => [event(side, 'ceremony'), event(side, 'party')].filter(Boolean);
+    const events = side => [event(side, 'ceremony'), event(side, 'party')].filter(Boolean).sort((a, b) => a.at.t - b.at.t);
     const mainSide = mode === 'chung' ? 'gai' : mode;
-    const main = events(mainSide)[0]?.at || when(C.trai?.ceremonyAt) || when(C.trai?.partyAt);
+    // Ngày chính: lễ sớm nhất của bên mời (nhà trai 17.11, nhà gái 16.11); thiệp chung lấy lễ đầu của nhà gái
+    const main = (mode === 'chung' ? (event(mainSide, 'ceremony') || event(mainSide, 'party'))?.at : events(mode)[0]?.at) || when(C.trai?.ceremonyAt) || when(C.trai?.partyAt);
     const guest = (params.get('to') || '').trim().slice(0, 60);
     const qrOf = p => photoSrc(p.bank?.qr) || (p.bank?.code && p.bank?.account
       ? `https://img.vietqr.io/image/${encodeURIComponent(p.bank.code)}-${encodeURIComponent(p.bank.account)}-qr_only.png?accountName=${encodeURIComponent(p.bank.holder || '')}` : '');
@@ -164,7 +165,7 @@
       names: [first.name || (first === G ? 'Chú rể' : 'Cô dâu'), second.name || (second === G ? 'Chú rể' : 'Cô dâu')],
       families: (mode === 'gai' ? [['Nhà gái', B], ['Nhà trai', G]] : [['Nhà trai', G], ['Nhà gái', B]]).filter(([, p]) => p.father || p.mother),
       timeline: mode === 'chung' && !C.schedule?.length ? [['Nhà trai', sched('trai')], ['Nhà gái', sched('gai')]].filter(([, r]) => r.length) : [['', sched(mode === 'chung' ? 'trai' : mode)]].filter(([, r]) => r.length),
-      photos: { right: pick('hero', 0), left: pick('hero2', 1), calendar: pick('calendar', 2), first: pick(first === G ? 'groom' : 'bride', 3), second: pick(second === G ? 'groom' : 'bride', 4), board: pick('guestbook', 5), footer: pick('footer', 6), album },
+      photos: { right: pick('hero', 0), left: pick('hero2', 1), calendar: pick('calendar', 2), couple: pick('couple', 3) || photoSrc(P.groom) || photoSrc(P.bride), board: pick('guestbook', 5), footer: pick('footer', 6), album },
       focus: P.focus || {},
     };
   }
@@ -189,7 +190,7 @@
     if (M.main) {
       const { y, m } = M.main, lead = (new Date(y, m - 1, 1).getDay() + 6) % 7, days = new Date(y, m, 0).getDate(), rows = Math.ceil((lead + days) / 7);
       const marked = new Set([M.main.d]);
-      (M.mode === 'chung' ? ['gai', 'trai'] : [M.mode]).forEach(s => M.events(s).forEach(e => { if (e.at.y === y && e.at.m === m) marked.add(e.at.d); }));
+      if (M.mode === 'chung') ['gai', 'trai'].forEach(s => M.events(s).forEach(e => { if (e.at.y === y && e.at.m === m) marked.add(e.at.d); })); // thiệp riêng: chỉ tim ngày chính
       const u = v => `calc(${v} * var(--u))`;
       cal = `<div class="section calendar" style="height:${u(Math.max(259, 112.5 + 21 * rows + 26))}" aria-label="Lịch tháng cưới">
         ${reveal('slideInLeft', 'abs calendar-polaroid', `<div class="polaroid-card"></div><div class="polaroid-window">${photo(M.photos.calendar, 'Ảnh lịch cưới', M.focus[M.photos.calendar])}</div>${reveal('fadeIn', 'calendar-caption', esc(M.O.caption || 'Moments'), { tag: 'p' })}`)}
@@ -204,7 +205,7 @@
       ${reveal('fadeIn', 'abs hero-bouquet-top', decor('hero-bouquet-top', '', 'position:static;width:100%'), { play: true, attrs: ' aria-hidden="true"' })}
       ${pol(M.photos.left, 1, 'left')}
       ${reveal('fadeIn', 'abs hero-cluster-mid', decor('hero-cluster-mid', '', 'position:static;width:100%'), { play: true, attrs: ' aria-hidden="true"' })}
-      ${reveal('slideInLeft', 'abs ticket', `<img class="ticket-art" src="${IMG}ticket.webp" alt="" draggable="false"><p class="ticket-text ticket-save">Save our date</p><p class="ticket-text ticket-date">${date}</p><p class="ticket-text ticket-married">We’re getting married!</p><p class="ticket-text ticket-stub" data-fit-one="0.5,0.02">${esc(lastWord(M.names[0]))} - ${esc(lastWord(M.names[1]))}</p>`, { play: true, attrs: ` aria-label="Save our date ${M.main?.dot || ''}"` })}
+      ${reveal('slideInLeft', 'abs ticket', `<img class="ticket-art" src="${IMG}ticket.webp" alt="" draggable="false"><p class="ticket-text ticket-save">Save our date</p><p class="ticket-text ticket-date">${date}</p><p class="ticket-text ticket-married">We’re getting married!</p><p class="ticket-text ticket-stub" data-fit-one="0.5,0.02">${esc(initial(M.names[0]))} &amp; ${esc(initial(M.names[1]))}</p>`, { play: true, attrs: ` aria-label="Save our date ${M.main?.dot || ''}"` })}
       ${decor('envelope-front', 'envelope-layer envelope-front')}${decor('hero-bouquet-right', 'hero-bouquet-right')}
       <div class="abs hero-mask" aria-hidden="true"></div>
       ${decor('hero-bouquet-left', 'hero-bouquet-left')}
@@ -217,15 +218,14 @@
   function coupleHTML(M) {
     const prefix = M.O.prefix || M.C.inviteLabel || 'Thân mời', guest = M.guest || M.O.guest || 'Quý vị & Gia đình';
     const lines = String(M.O.invite || 'tham dự tiệc chung vui\ncùng gia đình chúng tôi').split('\n').map(s => s.trim()).filter(Boolean);
-    const isGroom = p => p === M.C.groom;
-    const card = (side, src, who) => reveal('fadeIn', `abs person-card person-${side}`, `<div class="polaroid-card"></div><div class="polaroid-window">${photo(src, `Ảnh ${who}`, M.focus[src])}</div>`);
+    const src = M.photos.couple;
+    const card = src ? reveal('fadeIn', 'abs person-card person-couple', `<div class="polaroid-card"></div><div class="polaroid-window">${photo(src, 'Ảnh cô dâu và chú rể', M.focus[src])}</div>`) : '';
     return `<section id="couple" class="section couple" aria-label="Cô dâu và chú rể">
       ${reveal('zoomIn', 'couple-invite', `<div data-fit-group="0.6,0.03">${prefix ? `<p class="couple-invite-line" data-fit-text>${esc(prefix)}</p>` : ''}<p class="couple-invite-guest" data-fit-one="0.6,0">${esc(guest)}</p>${lines.map(l => `<p class="couple-invite-line" data-fit-text>${esc(l)}</p>`).join('')}</div>`)}
       <div class="couple-stage">
-        ${card('right', M.photos.second, isGroom(M.second) ? 'chú rể' : 'cô dâu')}
+        ${card}
         <div class="abs couple-names" data-fit-group="0.45,0.05">${reveal('zoomIn', 'couple-and', '<span>&amp;</span>', { tag: 'p', attrs: ' aria-hidden="true"' })}${reveal('fadeInLeft', 'couple-name couple-name-first', `<span data-fit-text>${esc(M.names[0])}</span>`, { tag: 'h2' })}${reveal('fadeInRight', 'couple-name couple-name-second', `<span data-fit-text>${esc(M.names[1])}</span>`, { tag: 'h2' })}</div>
         ${reveal('fadeIn', 'abs couple-bouquet-right', decor('couple-bouquet-right', '', 'position:static;width:100%'), { dur: 2, attrs: ' aria-hidden="true"' })}
-        ${card('left', M.photos.first, isGroom(M.first) ? 'chú rể' : 'cô dâu')}
         ${decor('couple-bouquet-left', 'couple-bouquet-left')}
       </div></section>`;
   }
@@ -256,9 +256,9 @@
     </section>`;
   }
 
-  // Album như mẫu: số ảnh lẻ thì ảnh cuối chiếm cả hàng
+  // Album: ảnh dọc hai ảnh một hàng, ảnh ngang chiếm cả hàng theo đúng tỉ lệ ảnh (albumLayout() xếp lại khi biết cỡ ảnh)
   const albumHTML = M => M.photos.album.length ? `<section id="gallery" class="section album" aria-label="Album ảnh cưới">${reveal('fadeIn', 'script-title', 'Album Hình Cưới', { tag: 'h2' })}<div class="album-grid">${M.photos.album.map((src, i, a) =>
-    reveal('zoomIn', `album-item${a.length % 2 && i === a.length - 1 ? ' album-item-wide' : ''}`, `<button type="button" class="album-button" data-i="${i}" aria-label="Xem ảnh ${i + 1} trong album">${photo(src, `Ảnh album ${i + 1}`, M.focus[src])}</button>`)).join('')}</div></section>` : '';
+    reveal('zoomIn', `album-item${a.length % 2 && i === a.length - 1 ? ' album-item-solo' : ''}`, `<button type="button" class="album-button" data-i="${i}" aria-label="Xem ảnh ${i + 1} trong album">${photo(src, `Ảnh album ${i + 1}`, M.focus[src])}</button>`)).join('')}</div></section>` : '';
 
   function rsvpHTML(M) {
     const lead = M.O.rsvpLead || 'Mong quý khách báo trước giúp chúng tôi để việc đón tiếp được chu đáo nhất. Trân trọng!';
@@ -942,12 +942,41 @@
     }
   }
 
+  // Đọc cỡ từng ảnh album: ảnh ngang chiếm cả hàng theo đúng tỉ lệ (không bị cắt); ảnh dọc đi thành cặp: ảnh dọc lẻ
+  // ghép với ảnh dọc gần nhất phía sau (đổi chỗ ít nhất), còn lẻ một ảnh cuối thì đứng giữa hàng. Trình xem ảnh theo thứ tự mới.
+  function albumLayout(M, root) {
+    const grid = $('.album-grid', root), items = grid ? $$('.album-item', grid) : []; if (!items.length) return;
+    const ratio = it => new Promise(r => {
+      const img = $('img', it); if (!img) return r(0);
+      const p = new Image(); p.onload = () => r(p.naturalWidth / p.naturalHeight || 0); p.onerror = () => r(0); p.src = img.src;
+    });
+    Promise.all(items.map(ratio)).then(rs => {
+      const rows = []; let open = null;
+      items.forEach((it, i) => {
+        if (rs[i] > 1) rows.push([[it, rs[i]]]);
+        else if (open) { open.push([it, rs[i]]); open = null; }
+        else rows.push(open = [[it, rs[i]]]);
+      });
+      const src = M.photos.album.slice(), order = [];
+      rows.forEach(row => row.forEach(([it, r]) => {
+        const kind = r > 1 ? 'wide' : row.length === 1 ? 'solo' : '';
+        it.classList.toggle('album-item-wide', kind === 'wide'); it.classList.toggle('album-item-solo', kind === 'solo');
+        it.style.aspectRatio = kind === 'wide' ? String(r) : ''; it.style.height = kind === 'wide' ? 'auto' : '';
+        const btn = $('.album-button', it), n = order.length;
+        order.push(src[+btn.dataset.i]); btn.dataset.i = n; btn.setAttribute('aria-label', `Xem ảnh ${n + 1} trong album`);
+        const img = $('img', it); if (img) img.alt = `Ảnh album ${n + 1}`;
+        grid.append(it);
+      }));
+      M.photos.album.splice(0, order.length, ...order);
+    });
+  }
+
   // ---------- Chạy ----------
   function start(C) {
     const M = model(C);
     window.__oliu = M;
     const app = $('#app');
-    app.innerHTML = tidy(`<main class="shell"><div class="page">${heroHTML(M)}${coupleHTML(M)}${familyHTML(M)}${eventsHTML(M)}${timelineHTML(M)}${albumHTML(M)}${rsvpHTML(M)}${guestbookHTML(M)}${giftHTML(M)}${countdownHTML(M)}${footerHTML(M)}</div></main>`);
+    app.innerHTML = tidy(`<main class="shell"><div class="page">${heroHTML(M)}${coupleHTML(M)}${familyHTML(M)}${eventsHTML(M)}${albumHTML(M)}${giftHTML(M)}${countdownHTML(M)}${footerHTML(M)}</div></main>`);
     document.title = `${M.names[0]} & ${M.names[1]} — Thiệp cưới`;
     if (!preview && !TEST.noWelcome) app.insertAdjacentHTML('afterbegin', tidy(welcomeHTML(M)));
     unmark(app);
@@ -961,7 +990,7 @@
       $$('.side-switch button', app).forEach(x => x.setAttribute('aria-pressed', String(x === b)));
       const old = $('.event-group', app); old.insertAdjacentHTML('afterend', tidy(eventGroupHTML(M, b.dataset.side))); const neu = old.nextElementSibling; old.remove(); unmark(neu); reveals(neu);
     }));
-    countdown(M); lightbox(M); gifts(M); rsvp(M); guestbook(M); hearts();
+    albumLayout(M, app); countdown(M); lightbox(M); gifts(M); hearts();
     const sound = music(C);
     const welcome = $('.welcome', app);
     if (!welcome) { sound.open(false); playIntro(app); return; }
