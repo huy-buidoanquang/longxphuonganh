@@ -48,6 +48,7 @@ html, body { margin: 0; background: #fffbf9; }
 .ti { position: relative; }
 .ti p { margin: 0; position: relative; white-space: nowrap; }
 .ti.wrap p { white-space: normal; text-wrap: balance; }
+.ti p.script { -webkit-text-stroke: .022em currentColor; } /* phông viết tay thay thế nét mảnh hơn phông gốc: làm đậm nhẹ */
 .sup { position: relative; line-height: 0; vertical-align: baseline; }
 a.el { text-decoration: none; color: inherit; cursor: pointer; -webkit-tap-highlight-color: transparent; }
 

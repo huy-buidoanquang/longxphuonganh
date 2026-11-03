@@ -78,7 +78,7 @@
     const css = `font-family:${FONTS[st.f]};font-size:${st.s}px;line-height:${st.lh}px;color:${st.c};text-align:${st.a}` +
       (st.ls ? `;letter-spacing:${st.ls}` : '') + (st.tt ? `;text-transform:${st.tt}` : '') + (st.kn ? ';font-kerning:normal' : '');
     const br = t => esc(t).replace(/\n/g, '<br>'); // như Canva: dấu cách gộp lại, xuống dòng bằng <br>
-    return `<p style="${css}">${runs.map(r => r.sup != null ? `<span class="sup" style="font-size:${r.fs || '.6em'};bottom:${r.sup / 100 * st.s}px">${br(r.t)}</span>` : br(r.t)).join('')}</p>`;
+    return `<p${st.f === 'script' && !REF ? ' class="script"' : ''} style="${css}">${runs.map(r => r.sup != null ? `<span class="sup" style="font-size:${r.fs || '.6em'};bottom:${r.sup / 100 * st.s}px">${br(r.t)}</span>` : br(r.t)).join('')}</p>`;
   };
   function textEl(e) {
     let v = REF ? REF.txt[e.k] : TXT[e.k];
