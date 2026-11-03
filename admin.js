@@ -100,9 +100,7 @@
     ['father', 'Bố (Ông)'], ['mother', 'Mẹ (Bà)'], ['address', 'Địa chỉ gia đình', '', 'area'],
   ];
   const SIDE = [
-    ['announce', 'Dòng báo tin', '', 'area'], ['ceremonyPlace', 'Nơi cử hành hôn lễ', '', 'area'],
-    ['ceremonyAt', 'Giờ làm lễ', '', 'datetime-local'], ['ceremonyLunar', 'Ngày âm lịch của lễ', 'Tự điền khi đổi ngày'],
-    ['partyAt', 'Giờ tiệc cưới', '', 'datetime-local'], ['partyLunar', 'Ngày âm lịch của tiệc', 'Tự điền khi đổi ngày'],
+    ['ceremonyAt', 'Giờ làm lễ (lễ cử hành tại tư gia; ngày âm lịch tự tính)', '', 'datetime-local'], ['partyAt', 'Giờ tiệc cưới', '', 'datetime-local'],
     ['venue', 'Nơi đãi tiệc'], ['venueAddress', 'Địa chỉ nơi đãi tiệc'],
     ['map', 'Vị trí trên bản đồ', 'Toạ độ như 21.18,105.89 hoặc địa chỉ'], ['directions', 'Link nút "Chỉ đường"', 'https://maps.app.goo.gl/…', 'url'],
   ];
@@ -115,6 +113,16 @@
     ['menus', 'Thực đơn cho khách chọn (mỗi dòng một lựa chọn)', 'Thực đơn thường\nThực đơn chay\nKhông ăn được hải sản', 'area'],
     ['msg', 'Lời cảm ơn cuối thiệp', 'Để trống: dùng lời cảm ơn cuối trang ở mục Khác', 'area'],
   ];
+  // Chữ trên thiệp chính (mẫu Ô Liu); ô trống thì dùng chữ mặc định của mẫu
+  const OLIU = [
+    ['guest', 'Tên khách khi link không có tên', 'Quý vị & Gia đình'], ['invite', 'Lời mời dưới tên khách', 'tham dự tiệc chung vui\ncùng gia đình chúng tôi', 'area'],
+    ['caption', 'Chữ dưới ảnh cạnh lịch', 'Moments'], ['rsvpLead', 'Lời nhắn ở mục Xác nhận tham dự', 'Mong quý khách báo trước giúp chúng tôi để việc đón tiếp được chu đáo nhất. Trân trọng!', 'area'],
+    ['guestbookLead', 'Lời nhắn ở Sổ lưu bút', 'Ký tên và gửi lời chúc đến chúng mình.'], ['giftThanks', 'Lời cảm ơn dưới mã QR mừng cưới', 'Sự hiện diện của bạn là món quà quý giá nhất đối với chúng tôi', 'area'],
+    ['thanksTitle', 'Tiêu đề cuối thiệp', 'Lời cảm ơn!'],
+  ];
+  // Các ô ảnh của thiệp chính; ô trống thì lấy ảnh trong album
+  const SLOTS = [['hero', 'Ảnh bìa: khung lớn bên phải phong bì (cũng là ảnh khi gửi link qua Zalo, Messenger)'], ['hero2', 'Khung nhỏ bên trái phong bì'], ['calendar', 'Ảnh cạnh lịch'],
+    ['groom', 'Ảnh chú rể'], ['bride', 'Ảnh cô dâu'], ['guestbook', 'Ảnh nền Sổ lưu bút (khách ký tên lên ảnh)'], ['footer', 'Ảnh cuối thiệp']];
   const field = (k, label, hint = '', type = 'text', wide) => `<label class="f${wide ? ' wide' : ''}"><span>${label}</span>${type === 'area'
     ? `<textarea data-k="${k}" rows="2" placeholder="${esc(hint)}"></textarea>`
     : `<input data-k="${k}" type="${type}" placeholder="${esc(hint)}">`}</label>`;
@@ -132,7 +140,7 @@
     },
     colors: { title: 'Màu trang phục gợi ý (bỏ hết thì ẩn mục Dress code)', add: '+ Thêm màu', blank: () => '#c9a24a', row: c => `<input type="color" data-f="" value="${esc(c)}" aria-label="Màu">` },
     album: {
-      title: 'Album ảnh (ô trống hiện ảnh minh hoạ; bỏ hết thì ẩn album)',
+      title: 'Album ảnh (bấm ảnh trên thiệp để xem lớn; bỏ hết thì ẩn album)',
       row: (p, i) => (p ? `<img class="thumb" src="${esc(media(p))}" alt="Ảnh ${i + 1}">` : '<div class="thumb">Chưa có ảnh</div>')
         + '<label class="btn">Chọn ảnh<input type="file" accept="image/*" data-img="album"></label>',
     },
@@ -144,11 +152,13 @@
       sec('Cô dâu', fields('bride.', PERSON) + bank('bride')),
       sec('Thiệp nhà trai <small>— link mặc định</small>', fields('trai.', SIDE) + list('trai.schedule', 'schedule')),
       sec('Thiệp nhà gái <small>— link có ?nha=gai</small>', fields('gai.', SIDE) + list('gai.schedule', 'schedule')),
-      sec('Ảnh cưới', '<div class="wide"><div class="lh">Ảnh bìa (trong phong bì; cũng là ảnh hiện khi gửi link qua Zalo, Messenger. Chưa có ảnh thì dùng ảnh tấm thiệp)</div><div class="photo hero-photo" id="hero"></div></div>' + list('photos.album', 'album')),
+      sec('Ảnh cưới', `<div class="wide photos slots">${SLOTS.map(([k, label]) => `<div class="photo" id="ph-${k}" data-slot="${k}" title="${esc(label)}"></div>`).join('')}</div>` + list('photos.album', 'album')),
       sec('Nhạc nền', '<div class="wide" id="music"></div>'),
       sec('Xác nhận tham dự & lời chúc', field('rsvp.email', 'Email nhận xác nhận tham dự', 'VD: tencuaban@gmail.com', 'email')
         + field('rsvp.endpoint', 'Link Google Apps Script (không bắt buộc)', 'https://script.google.com/macros/s/…/exec', 'url')
         + '<p class="note wide">Có link Google Apps Script thì xác nhận và lời chúc của khách được lưu vào Google Sheet (xem file rsvp-google-sheet.gs trong kho). Để trống thì nút gửi mở email soạn sẵn tới email ở trên.</p>'),
+      sec('Chữ trên thiệp <small>— ô trống thì dùng chữ của mẫu</small>', fields('oliu.', OLIU)
+        + '<p class="note wide">Link thiệp: mặc định là thiệp nhà trai, thêm ?nha=gai là thiệp nhà gái, ?nha=chung là thiệp chung (khách tự chọn nhà trai hoặc nhà gái). Ngày âm lịch, lịch tháng và đếm ngược tự tính theo giờ làm lễ.</p>'),
       sec('Thiệp mẫu Ivory <small>— trang /ivory/, ô trống thì dùng chữ mặc định</small>', fields('ivory.', IVORY)
         + '<p class="note wide">Thiệp Ivory dùng chung tên, ngày giờ, địa điểm, lịch trình, ảnh và tài khoản mừng cưới ở các mục trên (tối đa 5 mốc lịch trình).</p>'),
       sec('Khác', field('inviteLabel', 'Lời mời trên màn mở thiệp', 'Thân Mời') + field('dressCode.note', 'Dòng ghi chú Dress code')
@@ -167,9 +177,11 @@
       + '</div>' + (album ? '<label class="btn add">+ Thêm ảnh<input type="file" accept="image/*" multiple data-img="album"></label>' : `<button type="button" class="add" data-act="add">${L.add}</button>`);
   }
   function drawHero() {
-    const p = draft.photos.hero;
-    $('#hero').innerHTML = (p ? `<img class="thumb" src="${esc(media(p))}" alt="Ảnh bìa">` : '<div class="thumb">Chưa có ảnh<br>(đang dùng ảnh minh hoạ)</div>')
-      + `<div class="acts"><label class="btn">Chọn ảnh<input type="file" accept="image/*" data-img="hero"></label>${p ? '<button type="button" data-act="clear" data-target="photos.hero">Bỏ ảnh</button>' : ''}</div>`;
+    for (const [k, label] of SLOTS) {
+      const p = draft.photos[k], short = label.split(/[:(]/)[0].trim();
+      $('#ph-' + k).innerHTML = `<div class="lh">${esc(short)}</div>` + (p ? `<img class="thumb" src="${esc(media(p))}" alt="${esc(short)}">` : '<div class="thumb">Chưa có ảnh<br>(dùng ảnh trong album)</div>')
+        + `<div class="acts"><label class="btn">Chọn ảnh<input type="file" accept="image/*" data-img="${k}"></label>${p ? `<button type="button" data-act="clear" data-target="photos.${k}">Bỏ ảnh</button>` : ''}</div>`;
+    }
   }
   function drawMusic() {
     const p = draft.music;
@@ -189,10 +201,6 @@
       if (k.endsWith('.bank.name')) { // mã ngân hàng cho ảnh QR (VietQR); không có trong danh sách thì dùng luôn tên đã gõ
         const b = BANKS.find(x => [x.shortName, x.code, x.name].some(n => norm(n) === norm(v)));
         set(draft, k.replace(/name$/, 'code'), b ? b.code : v.trim());
-      }
-      if (k.endsWith('At') && /^\d{4}-\d\d-\d\dT/.test(v)) { // đổi ngày thì điền lại dòng âm lịch
-        const [y, m, d] = v.split(/\D/).map(Number), lk = k.replace(/At$/, 'Lunar'), txt = lunarText(d, m, y);
-        set(draft, lk, txt); $(`[data-k="${lk}"]`).value = txt;
       }
       return changed();
     }
@@ -228,7 +236,7 @@
       else {
         const paths = [];
         for (const f of files) paths.push(await addImage(f, inp.dataset.img));
-        if (inp.dataset.img === 'hero') { draft.photos.hero = paths[0]; draft.photos.og = await addShareImage(files[0]); drawHero(); }
+        if (inp.dataset.img !== 'album') { draft.photos[inp.dataset.img] = paths[0]; if (inp.dataset.img === 'hero') draft.photos.og = await addShareImage(files[0]); drawHero(); }
         else { if (row) draft.photos.album[+row.dataset.i] = paths[0]; else draft.photos.album.push(...paths); drawList(lst); }
       }
       changed();
@@ -253,7 +261,7 @@
     const bmp = await createImageBitmap(file, { imageOrientation: 'from-image' }), W = 1200, H = 630;
     const c = Object.assign(document.createElement('canvas'), { width: W, height: H }), g = c.getContext('2d');
     const draw = k => g.drawImage(bmp, (W - bmp.width * k) / 2, (H - bmp.height * k) / 2, bmp.width * k, bmp.height * k);
-    g.fillStyle = '#511419'; g.fillRect(0, 0, W, H);
+    g.fillStyle = '#6f6b47'; g.fillRect(0, 0, W, H);
     g.filter = 'blur(24px) brightness(.55)'; draw(Math.max(W / bmp.width, H / bmp.height) * 1.15);
     g.filter = 'none'; draw(Math.min(W / bmp.width, H / bmp.height));
     bmp.close();
@@ -357,67 +365,6 @@
     BANKS = j.data || [];
     $('#banks').innerHTML = BANKS.map(b => `<option value="${esc(b.shortName)}">${esc(b.code)} · ${esc(b.name)}</option>`).join('');
   }).catch(() => {});
-
-  // ---------- Âm lịch (thuật toán Hồ Ngọc Đức, giờ Việt Nam) để tự điền "(Tức ngày … tháng … năm …)" ----------
-  const lunarText = (() => {
-    const PI = Math.PI, INT = Math.floor, TZ = 7;
-    const jdFromDate = (dd, mm, yy) => {
-      const a = INT((14 - mm) / 12), y = yy + 4800 - a, m = mm + 12 * a - 3;
-      const jd = dd + INT((153 * m + 2) / 5) + 365 * y + INT(y / 4) - INT(y / 100) + INT(y / 400) - 32045;
-      return jd < 2299161 ? dd + INT((153 * m + 2) / 5) + 365 * y + INT(y / 4) - 32083 : jd;
-    };
-    const newMoon = k => {
-      const T = k / 1236.85, T2 = T * T, T3 = T2 * T, dr = PI / 180;
-      let Jd1 = 2415020.75933 + 29.53058868 * k + 0.0001178 * T2 - 0.000000155 * T3;
-      Jd1 += 0.00033 * Math.sin((166.56 + 132.87 * T - 0.009173 * T2) * dr);
-      const M = 359.2242 + 29.10535608 * k - 0.0000333 * T2 - 0.00000347 * T3;
-      const Mpr = 306.0253 + 385.81691806 * k + 0.0107306 * T2 + 0.00001236 * T3;
-      const F = 21.2964 + 390.67050646 * k - 0.0016528 * T2 - 0.00000239 * T3;
-      let C1 = (0.1734 - 0.000393 * T) * Math.sin(M * dr) + 0.0021 * Math.sin(2 * dr * M);
-      C1 = C1 - 0.4068 * Math.sin(Mpr * dr) + 0.0161 * Math.sin(dr * 2 * Mpr) - 0.0004 * Math.sin(dr * 3 * Mpr);
-      C1 = C1 + 0.0104 * Math.sin(dr * 2 * F) - 0.0051 * Math.sin(dr * (M + Mpr));
-      C1 = C1 - 0.0074 * Math.sin(dr * (M - Mpr)) + 0.0004 * Math.sin(dr * (2 * F + M));
-      C1 = C1 - 0.0004 * Math.sin(dr * (2 * F - M)) - 0.0006 * Math.sin(dr * (2 * F + Mpr));
-      C1 = C1 + 0.0010 * Math.sin(dr * (2 * F - Mpr)) + 0.0005 * Math.sin(dr * (2 * Mpr + M));
-      const deltat = T < -11 ? 0.001 + 0.000839 * T + 0.0002261 * T2 - 0.00000845 * T3 - 0.000000081 * T * T3 : -0.000278 + 0.000265 * T + 0.000262 * T2;
-      return Jd1 + C1 - deltat;
-    };
-    const newMoonDay = k => INT(newMoon(k) + 0.5 + TZ / 24);
-    const sunLong = dn => {
-      const T = (dn - 0.5 - TZ / 24 - 2451545.0) / 36525, T2 = T * T, dr = PI / 180;
-      const M = 357.52910 + 35999.05030 * T - 0.0001559 * T2 - 0.00000048 * T * T2, L0 = 280.46645 + 36000.76983 * T + 0.0003032 * T2;
-      const DL = (1.914600 - 0.004817 * T - 0.000014 * T2) * Math.sin(dr * M) + (0.019993 - 0.000101 * T) * Math.sin(dr * 2 * M) + 0.000290 * Math.sin(dr * 3 * M);
-      let L = (L0 + DL) * dr;
-      L -= PI * 2 * INT(L / (PI * 2));
-      return INT(L / PI * 6);
-    };
-    const month11 = yy => {
-      const k = INT((jdFromDate(31, 12, yy) - 2415021) / 29.530588853);
-      const nm = newMoonDay(k);
-      return sunLong(nm) >= 9 ? newMoonDay(k - 1) : nm;
-    };
-    const leapOffset = a11 => {
-      const k = INT((a11 - 2415021.076998695) / 29.530588853 + 0.5);
-      let last, i = 1, arc = sunLong(newMoonDay(k + i));
-      do { last = arc; i++; arc = sunLong(newMoonDay(k + i)); } while (arc !== last && i < 14);
-      return i - 1;
-    };
-    const CAN = ['Canh', 'Tân', 'Nhâm', 'Quý', 'Giáp', 'Ất', 'Bính', 'Đinh', 'Mậu', 'Kỷ'];
-    const CHI = ['Thân', 'Dậu', 'Tuất', 'Hợi', 'Tý', 'Sửu', 'Dần', 'Mão', 'Thìn', 'Tỵ', 'Ngọ', 'Mùi'];
-    return (dd, mm, yy) => {
-      const dn = jdFromDate(dd, mm, yy), k = INT((dn - 2415021.076998695) / 29.530588853);
-      let start = newMoonDay(k + 1);
-      if (start > dn) start = newMoonDay(k);
-      let a11 = month11(yy), b11 = a11, ly;
-      if (a11 >= start) { ly = yy; a11 = month11(yy - 1); } else { ly = yy + 1; b11 = month11(yy + 1); }
-      const diff = INT((start - a11) / 29);
-      let leap = false, lm = diff + 11;
-      if (b11 - a11 > 365) { const lo = leapOffset(a11); if (diff >= lo) { lm = diff + 10; leap = diff === lo; } }
-      if (lm > 12) lm -= 12;
-      if (lm >= 11 && diff < 4) ly -= 1;
-      return `(Tức ngày ${p2(dn - start + 1)} tháng ${p2(lm)}${leap ? ' nhuận' : ''} năm ${CAN[ly % 10]} ${CHI[ly % 12]})`;
-    };
-  })();
 
   // ---------- Khách mời: link mời riêng, gửi qua Zalo / Messenger, đồng bộ giữa các máy ----------
   // Mỗi khách có t (lúc sửa sau cùng) để gộp giữa các máy; khách bị xoá còn lại {id, del: 1, t} để máy khác xoá theo.
