@@ -77,17 +77,42 @@ window.CONTENT = {
     ]
   },
   "photos": {
-    "hero": "images/hero-mvz7xwe10dahs.jpg",
+    "hero": "images/hero-mw0gq573m3ib2.jpg",
     "album": [
-      "images/album-mvz807jfcl9pv.jpg",
-      "images/album-mvz9wj6iovk0u.jpg",
-      "",
-      "",
-      "",
-      "",
-      ""
+      "images/album-mw0gq577hy5z3.jpg",
+      "images/album-mw0gq5774shp3.jpg",
+      "images/album-mw0gq577tegr3.jpg",
+      "images/album-mw0gq578zpuhy.jpg",
+      "images/album-mw0gq578perg9.jpg",
+      "images/album-mw0gq57981sxa.jpg",
+      "images/album-mw0gq579mn7vv.jpg",
+      "images/album-mw0gq579uibti.jpg",
+      "images/album-mw0gq57apiigk.jpg",
+      "images/album-mw0gq57ae018r.jpg",
+      "images/album-mw0gq57ankl5o.jpg",
+      "images/album-mw0gq57bhc2pz.jpg",
+      "images/album-mw0gq57b5xjuc.jpg",
+      "images/album-mw0gq57bhnrbc.jpg",
+      "images/album-mw0gq57cd1e54.jpg",
+      "images/album-mw0gq57czacy3.jpg",
+      "images/album-mw0gq57ccyi33.jpg",
+      "images/album-mw0gq57dijmyj.jpg"
     ],
-    "og": "images/og-mvz8x85jlpm28.jpg"
+    "og": "images/og-mw0gqk8zm25l8.jpg",
+    "focus": {
+      "images/groom-mw0gq575iqrk6.jpg": "50% 20%",
+      "images/bride-mw0gq576f7vwl.jpg": "50% 20%",
+      "images/footer-mw0gq576kvxso.jpg": "50% 12%",
+      "images/album-mw0gq578perg9.jpg": "40% 50%",
+      "images/album-mw0gq57apiigk.jpg": "40% 50%",
+      "images/album-mw0gq57dijmyj.jpg": "80% 50%"
+    },
+    "hero2": "images/hero2-mw0gq574l4n9e.jpg",
+    "calendar": "images/calendar-mw0gq575by7kq.jpg",
+    "groom": "images/groom-mw0gq575iqrk6.jpg",
+    "bride": "images/bride-mw0gq576f7vwl.jpg",
+    "guestbook": "images/guestbook-mw0gq5768m2me.jpg",
+    "footer": "images/footer-mw0gq576kvxso.jpg"
   },
   "music": "",
   "inviteLabel": "Thân Mời",

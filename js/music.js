@@ -1,13 +1,19 @@
 'use strict';
 /* Nhạc nền. Nếu <audio id="bgm"> có src thì phát file đó; nếu không, tự chơi "Canon in D" (Pachelbel, 1680 —
-   phạm vi công cộng) theo kiểu hộp nhạc bằng Web Audio, không cần file mp3. Phải gọi start() trong một cú chạm. */
+   phạm vi công cộng) theo kiểu hộp nhạc bằng Web Audio, không cần file mp3.
+   prime() gọi trong một cú chạm để trình duyệt cho phép phát (chưa có tiếng); play() trả về Promise<true|false>. */
 function createMusic() {
   const file = document.getElementById('bgm');
   if (file && file.getAttribute('src')) {
-    file.volume = 0.7;
+    file.volume = 0.5; // như thiệp mẫu
+    let want = false, primed = false;
     return {
-      start() { file.play().catch(() => {}); return true; },
-      toggle() { file.paused ? file.play().catch(() => {}) : file.pause(); return !file.paused; },
+      prime() { // phát tắt tiếng rồi dừng ngay, chỉ để mở khoá
+        if (primed) return; primed = true; file.muted = true;
+        file.play().then(() => { if (!want) file.pause(); }, () => {}).finally(() => { file.muted = false; });
+      },
+      play() { want = true; file.muted = false; return file.play().then(() => true, () => false); },
+      pause() { want = false; file.pause(); },
     };
   }
   const AC = window.AudioContext || window.webkitAudioContext;
@@ -19,7 +25,7 @@ function createMusic() {
   const BASS = [50, 45, 47, 42, 43, 38, 43, 45];
   const ARP = [[62, 66, 69, 74], [61, 64, 69, 73], [62, 66, 71, 74], [61, 66, 69, 73], [62, 67, 71, 74], [62, 66, 69, 74], [62, 67, 71, 74], [61, 64, 69, 73]];
   const MELODY = [[78, 76, 74, 73, 71, 69, 71, 73], [74, 73, 71, 69, 67, 66, 67, 64]];
-  let ctx, out, nextAt = 0, loop = 0, playing = false;
+  let ctx, out, master, nextAt = 0, loop = 0, playing = false, started = false;
 
   function note(t, m, gain, decay, partials) {
     const g = ctx.createGain();
@@ -55,36 +61,38 @@ function createMusic() {
     return buf;
   }
 
-  function tick() { // lên lịch trước từng vòng nhạc khi sắp hết vòng hiện tại
-    if (ctx.state === 'running' && nextAt - ctx.currentTime < 1.5) {
+  function schedule() { // lên lịch trước từng vòng nhạc khi sắp hết vòng hiện tại
+    if (playing && ctx.state === 'running' && nextAt - ctx.currentTime < 1.5) {
       const t0 = Math.max(nextAt, ctx.currentTime + 0.05);
       scheduleLoop(t0);
       nextAt = t0 + LOOP;
     }
-    setTimeout(tick, 500);
   }
+  function tick() { schedule(); setTimeout(tick, 500); }
 
   function init() {
     ctx = new AC();
-    const master = ctx.createGain(), lp = ctx.createBiquadFilter(), verb = ctx.createConvolver(), wet = ctx.createGain();
+    master = ctx.createGain();
+    const lp = ctx.createBiquadFilter(), verb = ctx.createConvolver(), wet = ctx.createGain();
     master.gain.value = 0;
-    master.gain.setTargetAtTime(0.6, ctx.currentTime, 0.8); // nhỏ dần lên
     lp.type = 'lowpass'; lp.frequency.value = 4200;
     verb.buffer = impulse(2.8); wet.gain.value = 0.5;
     out = ctx.createGain();
     out.connect(lp); out.connect(verb); verb.connect(wet); wet.connect(lp); lp.connect(master); master.connect(ctx.destination);
-    nextAt = ctx.currentTime + 0.1;
     tick();
-    document.addEventListener('visibilitychange', () => { if (document.hidden) ctx.suspend(); else if (playing) ctx.resume(); });
+    document.addEventListener('visibilitychange', () => { if (document.hidden) ctx.suspend(); else if (playing) ctx.resume().then(schedule); });
   }
 
   return {
-    start() { if (!ctx) init(); playing = true; ctx.resume(); return true; },
-    toggle() {
-      if (!ctx) return this.start();
-      playing = !playing;
-      playing ? ctx.resume() : ctx.suspend();
-      return playing;
+    prime() { if (!ctx) init(); ctx.resume().catch(() => {}); }, // mở khoá AudioContext, chưa lên lịch nốt nào
+    play() {
+      if (!ctx) init();
+      playing = true;
+      if (!started) { started = true; nextAt = ctx.currentTime + 0.1; master.gain.setTargetAtTime(0.6, ctx.currentTime, 0.8); } // nhỏ dần lên
+      // trình duyệt chưa cho phát thì resume() treo mãi, nên quá 1 giây coi như không phát được
+      const ok = ctx.resume().then(() => ctx.state === 'running', () => false);
+      return Promise.race([ok, new Promise(r => setTimeout(r, 1000, false))]).then(v => { if (v) schedule(); return v; });
     },
+    pause() { playing = false; if (ctx) ctx.suspend(); },
   };
 }
