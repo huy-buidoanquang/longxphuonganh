@@ -82,9 +82,6 @@ window.CONTENT = {
       "images/album-mw0gq577hy5z3.jpg",
       "images/album-mw0gq5774shp3.jpg",
       "images/album-mw0gq577tegr3.jpg",
-      "images/album-mw0gq578zpuhy.jpg",
-      "images/album-mw0gq578perg9.jpg",
-      "images/album-mw0gq57981sxa.jpg",
       "images/album-mw0gq579mn7vv.jpg",
       "images/album-mw0gq579uibti.jpg",
       "images/album-mw0gq57apiigk.jpg",
@@ -95,7 +92,6 @@ window.CONTENT = {
       "images/album-mw0gq57bhnrbc.jpg",
       "images/album-mw0gq57cd1e54.jpg",
       "images/album-mw0gq57czacy3.jpg",
-      "images/album-mw0gq57ccyi33.jpg",
       "images/album-mw0gq57dijmyj.jpg"
     ],
     "og": "images/og-mw0gqk8zm25l8.jpg",
@@ -107,7 +103,7 @@ window.CONTENT = {
       "images/album-mw0gq57apiigk.jpg": "40% 50%",
       "images/album-mw0gq57dijmyj.jpg": "80% 50%"
     },
-    "hero2": "images/hero2-mw0gq574l4n9e.jpg",
+    "hero2": "images/hero2-mw2atnponess0.jpg",
     "calendar": "images/calendar-mw0gq575by7kq.jpg",
     "couple": "images/album-mw0gq578perg9.jpg",
     "guestbook": "images/guestbook-mw0gq5768m2me.jpg",
