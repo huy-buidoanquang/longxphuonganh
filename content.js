@@ -79,20 +79,11 @@ window.CONTENT = {
   "photos": {
     "hero": "images/hero-mw0gq573m3ib2.jpg",
     "album": [
-      "images/album-mw0gq577hy5z3.jpg",
       "images/album-mw0gq5774shp3.jpg",
-      "images/album-mw0gq577tegr3.jpg",
-      "images/album-mw0gq579mn7vv.jpg",
-      "images/album-mw0gq579uibti.jpg",
-      "images/album-mw0gq57apiigk.jpg",
-      "images/album-mw0gq57ae018r.jpg",
-      "images/album-mw0gq57ankl5o.jpg",
       "images/album-mw0gq57bhc2pz.jpg",
-      "images/album-mw0gq57b5xjuc.jpg",
-      "images/album-mw0gq57bhnrbc.jpg",
-      "images/album-mw0gq57cd1e54.jpg",
-      "images/album-mw0gq57czacy3.jpg",
-      "images/album-mw0gq57dijmyj.jpg"
+      "images/album-mw0gq577tegr3.jpg",
+      "images/album-mw0gq57dijmyj.jpg",
+      "images/album-mw0gq57ankl5o.jpg"
     ],
     "og": "images/og-mw0gqk8zm25l8.jpg",
     "focus": {
